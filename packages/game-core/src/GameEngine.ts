@@ -8,7 +8,7 @@ import {
   makeShards,
 } from './geometry'
 import { emojiFor, resolveThrow } from './throws'
-import { rand } from '@/lib/random'
+import { rand } from './random'
 import type {
   Clash,
   ClashAnim,

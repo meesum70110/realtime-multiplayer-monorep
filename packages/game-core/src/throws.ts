@@ -1,4 +1,4 @@
-import { rand } from '@/lib/random'
+import { rand } from './random'
 import { DEFAULT_PROPS, EMOJI_MAP, FALLBACKS, TIE_FLAVORS, VERBS } from './constants'
 import type { RoundOutcome } from './types'
 

@@ -1,4 +1,4 @@
-import type { MorphSym } from '@/engine/types'
+import type { MorphSym } from '@rpsa/game-core'
 
 /** SVG path per morph symbol (design `morphIconNode`, lines ~1349–1365). */
 const PATHS: Record<Exclude<MorphSym, 'q'>, string> = {

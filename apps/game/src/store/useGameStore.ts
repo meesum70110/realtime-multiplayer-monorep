@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react'
-import { engine } from '@/engine/instance'
-import { buildView } from '@/engine/view'
-import type { State, ViewModel } from '@/engine/types'
+import { engine } from '@/store/instance'
+import { buildView } from '@rpsa/game-core'
+import type { State, ViewModel } from '@rpsa/game-core'
 
 /** Subscribe a component to raw engine state; re-renders on every setState. */
 export function useEngineState(): State {

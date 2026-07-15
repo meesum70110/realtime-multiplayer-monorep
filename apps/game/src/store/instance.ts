@@ -1,4 +1,4 @@
-import { GameEngine } from './GameEngine'
+import { GameEngine } from '@rpsa/game-core'
 
 /** The single, app-wide engine instance. */
 export const engine = new GameEngine()
