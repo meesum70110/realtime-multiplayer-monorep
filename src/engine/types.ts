@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ChangeEvent, KeyboardEvent, MouseEvent } from 'react'
 
 export type Phase = 'menu' | 'searching' | 'intro' | 'banner' | 'typing' | 'clash' | 'end'
 export type Outcome = '' | 'you' | 'opp' | 'tie' | 'timeout'
@@ -188,5 +188,400 @@ export interface State {
   inviteCopied: boolean
 }
 
-/** Placeholder contract — replaced with the full view-model shape in Task 7 (engine/view.ts). */
-export type ViewModel = Record<string, never>
+// ---- view-model row/item shapes (produced by engine/view.ts buildView) ----
+
+/** A style-only wrapper used for particle/shard/facet/fragment lists. */
+export interface StyleItem {
+  style: CSSProperties
+}
+
+export interface TopWordView extends TopWord {
+  rank: number
+  badgeStyle: CSSProperties
+  wrStyle: CSSProperties
+}
+
+export interface ClashView extends Clash {
+  ago: string
+  rowStyle: CSSProperties
+}
+
+export interface SettingsRowView {
+  label: string
+  desc: string
+  toggle: () => void
+  trackStyle: CSSProperties
+  knobStyle: CSSProperties
+}
+
+export interface FriendListItem {
+  name: string
+  country: string
+  initial: string
+  invited: boolean
+  notInvited: boolean
+  onInvite: (e?: MouseEvent) => void
+  onOpen: () => void
+  avatarStyle: CSSProperties
+  dotStyle: CSSProperties
+  statusLabel: string
+}
+
+export interface DotView {
+  w: string
+  color: string
+}
+
+export interface ProfileStat {
+  label: string
+  value: string
+}
+
+export interface CountryOption {
+  flag: string
+  name: string
+  selStyle: CSSProperties
+  pick: () => void
+}
+
+export interface ChatBubble {
+  text: string
+  rowStyle: CSSProperties
+  bubbleStyle: CSSProperties
+}
+
+export interface QuickChatView {
+  text: string
+  emoji: string
+  send: () => void
+}
+
+export interface SuggestionView {
+  word: string
+  emoji: string
+  pick: () => void
+}
+
+export interface UsedChipView {
+  emoji: string
+  word: string
+  wordShort: string
+  wordStyle: CSSProperties
+  style: CSSProperties
+  markStyle: CSSProperties
+  mark: string
+}
+
+export interface PaneLineView {
+  pts: string
+  style: { opacity: number; strokeWidth: number }
+}
+
+export interface HeadlineWord {
+  text: string
+  style: CSSProperties
+}
+
+export interface AnyLetter {
+  ch: string
+  style: CSSProperties
+}
+
+export interface HistoryRow {
+  label: string
+  you: string
+  opp: string
+  youEmoji: string
+  oppEmoji: string
+  resultMark: string
+  resultChipStyle: CSSProperties
+  youStyle: CSSProperties
+  oppStyle: CSSProperties
+}
+
+/** The complete render contract consumed by the screen/overlay components. Every
+ *  key is plain data (styles, strings, numbers, booleans) or an event handler —
+ *  no React elements live here (Ruleset #6). Produced by `buildView(engine)`. */
+export interface ViewModel {
+  // shared battle-card chrome
+  cardTex: CSSProperties
+  cardGloss: CSSProperties
+  cardTab: CSSProperties
+  cardMedal: CSSProperties
+  cardPlate: CSSProperties
+  cardSpark: CSSProperties
+  cardBackYou: CSSProperties
+  cardBackOpp: CSSProperties
+  cardBackPat: CSSProperties
+  lockedBackYou: CSSProperties
+  lockedBackOpp: CSSProperties
+
+  // menu morph logo (plain data, rendered by <MorphIcon/>)
+  morphSym: MorphSym
+  morphColor: string
+  morphInk: string
+  morphK: number
+
+  inGame: boolean
+  showMenu: boolean
+  champ: TopWord
+  topRest: TopWordView[]
+  clashes: ClashView[]
+  showSearching: boolean
+  searchIsSearching: boolean
+  searchIsFound: boolean
+  playersOnline: string
+  onFindMatch: () => void
+  onCancelSearch: () => void
+  showHowTo: boolean
+  showSettings: boolean
+  showInvite: boolean
+  onOpenSettings: () => void
+  onOpenInvite: () => void
+  settingsRows: SettingsRowView[]
+  inviteCodeStr: string
+  inviteCopied: boolean
+  inviteCopyLabel: string
+  onCopyInvite: () => void
+  friendsList: FriendListItem[]
+  showTutorialConfirm: boolean
+  stopProp: (e: MouseEvent) => void
+  onHowToPlay: () => void
+  onTutorial: () => void
+  onCloseOverlay: () => void
+  onStartTutorial: () => void
+
+  // how-to overlay
+  howStepLabel: string
+  howEmoji: string
+  howTitle: string
+  howBody: string
+  howEmojiWrapStyle: CSSProperties
+  howNextLabel: string
+  howDots: DotView[]
+  howBackStyle: CSSProperties
+  onHowBack: () => void
+  onHowNext: () => void
+  onSwitchToTutorial: () => void
+
+  // coach-mark tutorial
+  coachActive: boolean
+  coachRingStyle: CSSProperties
+  coachBubbleStyle: CSSProperties
+  coachNum: number
+  coachTotal: number
+  coachTitle: string | undefined
+  coachText: string | undefined
+  coachCta: string | undefined
+  coachCtaStyle: CSSProperties
+  coachDots: DotView[]
+  coachShowCta: boolean
+  coachShowWait: boolean
+  coachWaitLabel: string
+  coachHint: string
+  coachShowHint: boolean
+  onCoachNext: () => void
+  onCoachSkip: () => void
+
+  onMenu: () => void
+  onExit: () => void
+  showExitConfirm: boolean
+  onExitConfirm: () => void
+  onExitCancel: () => void
+  soundOn: boolean
+  soundOff: boolean
+  onToggleSound: () => void
+
+  // match chat
+  showChat: boolean
+  chatOpen: boolean
+  chatHasUnread: boolean
+  chatUnread: string
+  chatEmpty: boolean
+  onToggleChat: () => void
+  chatToast: string
+  chatShowToast: boolean
+  chatFabStyle: CSSProperties
+
+  // profile modal
+  showProfile: boolean
+  profileIsYou: boolean
+  profileIsBot: boolean
+  profileIsFriend: boolean
+  profileNotYou: boolean
+  profileName: string
+  profileHandle: string
+  profileFlag: string
+  profileCountry: string
+  profileTag: string
+  profileTagStyle: CSSProperties
+  profileRingStyle: CSSProperties
+  profileStats: ProfileStat[]
+  profileNotice: string
+  profileHasNotice: boolean
+  onCloseProfile: () => void
+  onProfileYou: () => void
+  onProfileOpp: () => void
+  onProfileFriend: () => void
+  onProfileReport: () => void
+  onProfileBlock: () => void
+  onProfileShare: () => void
+  onProfileSettings: () => void
+
+  // profile settings
+  showProfileSettings: boolean
+  nameDraft: string
+  onNameDraft: (e: ChangeEvent<HTMLInputElement>) => void
+  nameDraftRef: (el: HTMLInputElement | null) => void
+  onSaveProfile: () => void
+  onOpenGameSettings: () => void
+  playerName: string
+  countryOptions: CountryOption[]
+
+  chatScrollRef: (el: HTMLDivElement | null) => void
+  chatList: ChatBubble[]
+  quickChats: QuickChatView[]
+
+  // phase flags
+  showIntro: boolean
+  showBanner: boolean
+  showTyping: boolean
+  showClash: boolean
+  showEnd: boolean
+
+  // matchmaking / face-off
+  youFlag: string
+  youCountryName: string
+  oppFlag: string
+  oppCountryName: string
+  showMatchCount: boolean
+  matchCount: number
+  matchCountStyle: CSSProperties
+
+  // scoreboard / banner
+  roundLabel: string
+  formatLabel: string
+  bannerTitle: string
+  bannerTag: string
+  showBannerCount: boolean
+  bc3: boolean
+  bc2: boolean
+  bc1: boolean
+  beatRock: boolean
+  beatPaper: boolean
+  beatScissors: boolean
+  beatAnything: boolean
+  anyLetters: AnyLetter[]
+
+  // timer
+  secondsLeft: number
+  ringColor: string
+  ringOffset: number
+  timerWrapStyle: CSSProperties
+  timerNumStyle: CSSProperties
+  panicOn: boolean
+
+  bgMenuStyle: CSSProperties
+  bgArenaStyle: CSSProperties
+
+  youPips: StyleItem[]
+  oppPips: StyleItem[]
+  youUsed: UsedChipView[]
+  oppUsed: UsedChipView[]
+  qYouSm: CSSProperties
+  qOppSm: CSSProperties
+  previewCardStyle: CSSProperties
+
+  // typing-phase glass barrier
+  paneWrapStyle: CSSProperties
+  crackFlashOn: boolean
+  crackTick: number
+  crackFlashStyle: CSSProperties
+  paneOverlayStyle: CSSProperties
+  paneOutlinePts: string
+  paneCrackPts: string
+  paneLines: PaneLineView[]
+  paneFacetsStatic: StyleItem[]
+  paneFragsStatic: StyleItem[]
+  paneFrostStyle: CSSProperties
+  paneFrostBreakStyle: CSSProperties
+  paneGlintClipStyle: CSSProperties
+  paneGlintStyle: CSSProperties
+
+  oppHalfStyle: CSSProperties
+  oppModeSil: boolean
+  oppModeCardBack: boolean
+  oppModeDots: boolean
+  oppModeTypingPill: boolean
+  oppDots: string
+
+  input: string
+  onInput: (e: ChangeEvent<HTMLInputElement>) => void
+  onKey: (e: KeyboardEvent) => void
+  onSubmit: () => void
+  inputRef: (el: HTMLInputElement | null) => void
+  inputShakeStyle: CSSProperties
+  hasError: boolean
+  error: string
+  suggestions: SuggestionView[]
+
+  liveEmoji: string
+  liveEmojiStyle: CSSProperties
+  forgeWord: string
+  forgeWordStyle: CSSProperties
+
+  youLocked: boolean
+  youUnlocked: boolean
+  oppTyping: boolean
+  oppLockedFlag: boolean
+
+  // clash sequence
+  clashStageStyle: CSSProperties
+  clashWord: string
+  streakLStyle: CSSProperties
+  streakRStyle: CSSProperties
+  barrierBreaking: boolean
+  paneWrapBreakStyle: CSSProperties
+  paneOverlayBreakStyle: CSSProperties
+  paneFacetsBreak: StyleItem[]
+  paneFragsBreak: StyleItem[]
+  barShards: Shard[]
+  verdictShown: boolean
+  showVerdictCount: boolean
+  verdictNextLabel: string
+  verdictCount: number
+  verdictCountStyle: CSSProperties
+  yourClashWrapStyle: CSSProperties
+  oppClashWrapStyle: CSSProperties
+  yourBraceStyle: CSSProperties
+  oppBraceStyle: CSSProperties
+  yourFlipStyle: CSSProperties
+  oppFlipStyle: CSSProperties
+  yourFaceStyle: CSSProperties
+  oppFaceStyle: CSSProperties
+  shards: Shard[]
+  yourWord: string
+  oppWord: string
+  yourEmoji: string
+  oppEmoji: string
+  yourWordStyle: CSSProperties
+  oppWordStyle: CSSProperties
+  notTie: boolean
+  headlineWords: HeadlineWord[]
+  flavor: string
+  burst: Burst[]
+  verdictBadge: string
+  verdictBadgeStyle: CSSProperties
+
+  // end screen
+  endMedalEmoji: string
+  endMedalStyle: CSSProperties
+  endTitle: string
+  endTitleStyle: CSSProperties
+  endSub: string
+  youScore: number
+  oppScore: number
+  confetti: Confetti[]
+  history: HistoryRow[]
+  onRematch: () => void
+}
