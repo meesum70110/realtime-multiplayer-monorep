@@ -166,8 +166,8 @@ export interface State {
   youLocked: boolean
   oppLocked: boolean
   oppDots: number
-  yourWord: string
-  oppWord: string
+  yourThrow: string
+  oppThrow: string
   verdictCount: number
   outcome: Outcome
   headline: string
