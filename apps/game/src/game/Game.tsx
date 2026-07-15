@@ -14,7 +14,6 @@ import { InviteModal } from '@/overlays/InviteModal'
 import { HowToOverlay } from '@/overlays/HowToOverlay'
 import { TutorialConfirm } from '@/overlays/TutorialConfirm'
 import { CoachOverlay } from '@/overlays/CoachOverlay'
-import { VerdictBanner } from '@/overlays/VerdictBanner'
 
 import { Scoreboard } from '@/screens/Scoreboard'
 import { MenuScreen } from '@/screens/MenuScreen'
@@ -51,7 +50,6 @@ export function Game() {
       <HowToOverlay />
       <TutorialConfirm />
       <CoachOverlay />
-      <VerdictBanner />
 
       {vm.inGame && <Scoreboard />}
 
