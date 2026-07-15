@@ -6,7 +6,7 @@ export const DEFAULT_PROPS = Object.freeze({
   oppSide: 'masked typing',
   matchFormat: 'best of 3',
   timerSeconds: 15,
-  botSkill: 'fair',
+  botSkill: 'fair' as 'easy' | 'fair' | 'brutal',
   panicFx: true,
 } as const)
 
@@ -51,7 +51,7 @@ export const EMOJI_MAP: readonly (readonly [string, string])[] = [
 
 export const FALLBACKS: readonly string[] = ['✨', '🌀', '💥', '🔮', '🗿', '🛸', '⚡', '🎲']
 
-export const BOT_WORDS: readonly string[] = ['Lava', 'Black Hole', 'Angry Goose', 'Tax Audit', 'Diamond Drill', 'Time Machine', 'Wet Sock', 'Tiny Tornado', 'Quantum Foam', 'Sentient Fog', 'Karate Panda', 'Infinite Mirror', 'Glitter Bomb', 'Ancient Curse', 'Rubber Chicken', 'Solar Flare', 'Bureaucracy', 'Cursed VHS', 'Magnet Storm', 'Feral Toddler']
+export const BOT_THROWS: readonly string[] = ['Lava', 'Black Hole', 'Angry Goose', 'Tax Audit', 'Diamond Drill', 'Time Machine', 'Wet Sock', 'Tiny Tornado', 'Quantum Foam', 'Sentient Fog', 'Karate Panda', 'Infinite Mirror', 'Glitter Bomb', 'Ancient Curse', 'Rubber Chicken', 'Solar Flare', 'Bureaucracy', 'Cursed VHS', 'Magnet Storm', 'Feral Toddler']
 
 export const IDEAS: readonly string[] = ['Volcano', 'Magnet', 'Tsunami', 'Banana', 'Karma', 'Gravity', 'Lawyer', 'Bees', 'Wi-Fi', 'Ghost', 'Tornado', 'Piano', 'Hot Sauce', 'Kraken', 'Black Hole', 'Super Glue']
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { emojiFor, resolveClash, validate } from './weapons'
+import { emojiFor, resolveThrow, validate } from './throws'
 
 describe('emojiFor', () => {
   it('maps a known keyword', () => {
@@ -15,14 +15,14 @@ describe('validate', () => {
   it('rejects empty', () => {
     expect(validate('   ').ok).toBe(false)
   })
-  it('accepts a normal weapon', () => {
+  it('accepts a normal throw', () => {
     expect(validate('Angry Goose')).toEqual({ ok: true, word: 'Angry Goose' })
   })
 })
 
-describe('resolveClash', () => {
+describe('resolveThrow', () => {
   it('is deterministic-shaped', () => {
-    const r = resolveClash('Lava', 'Paper')
+    const r = resolveThrow('Lava', 'Paper')
     expect(['you', 'opp', 'tie']).toContain(r.outcome)
     expect(typeof r.headline).toBe('string')
   })

@@ -39,7 +39,7 @@ export function funnyFlavor(winner: string, loser: string): string {
   return rand(t)
 }
 
-export interface ClashVerdict {
+export interface ThrowVerdict {
   outcome: RoundOutcome
   headline: string
   flavor: string
@@ -47,7 +47,7 @@ export interface ClashVerdict {
 
 /** Pure you-vs-opp comparison core extracted from the design's decideOutcome (lines ~2120–2138).
  *  The 'timeout' special case and score mutation stay in GameEngine (Task 7). */
-export function resolveClash(you: string, opp: string): ClashVerdict {
+export function resolveThrow(you: string, opp: string): ThrowVerdict {
   if (you.toLowerCase() === opp.toLowerCase()) {
     return {
       outcome: 'tie',
