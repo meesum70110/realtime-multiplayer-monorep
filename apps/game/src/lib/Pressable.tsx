@@ -1,6 +1,6 @@
 import { useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
 
-type Tag = 'div' | 'button' | 'span'
+type Tag = 'div' | 'button' | 'span' | 'aside' | 'section' | 'a' | 'label' | 'li'
 
 interface PressableProps {
   as?: Tag
