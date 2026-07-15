@@ -1,9 +1,11 @@
 import { useView } from '@/store/useGameStore'
 import { css } from '@/lib/css'
 
+import { FitStage } from '@/lib/FitStage'
 import { ArenaBackground } from '@/components/ArenaBackground'
 import { PanicVignette } from '@/components/PanicVignette'
 import { SoundToggle } from '@/components/SoundToggle'
+import { ExitMatchButton } from '@/components/ExitMatchButton'
 
 import { ChatWidget } from '@/overlays/ChatWidget'
 import { ProfileModal } from '@/overlays/ProfileModal'
@@ -52,17 +54,26 @@ export function Game() {
       <CoachOverlay />
 
       {vm.inGame && <Scoreboard />}
+      <ExitMatchButton />
 
       <main
         style={css(
-          'flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 48px 28px; position: relative; z-index: 2;',
+          'flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px clamp(12px, 4vw, 48px) 28px; position: relative; z-index: 2;',
         )}
       >
-        {vm.showMenu && <MenuScreen />}
+        {vm.showMenu && (
+          <FitStage width={1280}>
+            <MenuScreen />
+          </FitStage>
+        )}
         {vm.showSearching && <MatchmakingScreen />}
         {vm.showIntro && <RoundIntro />}
         {vm.showBanner && <RoundBanner />}
-        {vm.showTyping && <ArenaScreen />}
+        {vm.showTyping && (
+          <FitStage width={1000}>
+            <ArenaScreen />
+          </FitStage>
+        )}
         {vm.showClash && <ClashStage />}
         {vm.showEnd && <EndScreen />}
       </main>

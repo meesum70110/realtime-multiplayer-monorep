@@ -1,5 +1,6 @@
 import { useView } from '@/store/useGameStore'
 import { css } from '@/lib/css'
+import { FitStage } from '@/lib/FitStage'
 import { VerdictBanner } from '@/overlays/VerdictBanner'
 
 /** The clash scene (design lines 1017–1147): one continuous sequence where the glass
@@ -25,6 +26,7 @@ export function ClashStage() {
         )}
       ></div>
 
+      <FitStage width={1000}>
       <div style={vm.clashStageStyle}>
         <div
           style={css(
@@ -225,6 +227,7 @@ export function ClashStage() {
       <div style={css('height: 110px; display: flex; justify-content: center; align-items: flex-start;')}>
         {vm.verdictShown && <VerdictBanner vm={vm} />}
       </div>
+      </FitStage>
     </div>
   )
 }

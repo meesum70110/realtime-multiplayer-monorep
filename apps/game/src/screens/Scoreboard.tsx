@@ -9,7 +9,7 @@ export function Scoreboard() {
   return (
     <header
       style={css(
-        'display: flex; align-items: center; justify-content: space-between; padding: 20px 40px 8px; gap: 24px; position: relative; z-index: 6;',
+        'display: flex; align-items: center; justify-content: space-between; padding: 20px clamp(12px, 3vw, 40px) 8px; gap: 24px; position: relative; z-index: 6;',
       )}
     >
       <div style={css('flex: 1; display: flex; justify-content: flex-start;')}>
@@ -90,26 +90,6 @@ export function Scoreboard() {
         <span style={css('font-size: 10.5px; font-weight: 800; letter-spacing: 0.18em; color: #9ca3af; text-transform: uppercase;')}>
           {vm.formatLabel}
         </span>
-        <Pressable
-          as="button"
-          onClick={vm.onExit}
-          baseStyle={css(
-            "display: inline-flex; align-items: center; gap: 7px; background: #fbf1e4; border: none; border-radius: 999px; padding: 7px 15px 7px 9px; font-family: 'Inter', sans-serif; font-size: 11.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #8a7a62; cursor: pointer; transition: all 0.15s ease; margin-top: 3px;",
-          )}
-          hoverStyle={css('color: #e63946; background: rgba(230,57,70,0.1); transform: translateY(-1px);')}
-        >
-          <span
-            style={css(
-              'width: 20px; height: 20px; border-radius: 999px; background: rgba(230,57,70,0.14); display: inline-flex; align-items: center; justify-content: center;',
-            )}
-          >
-            <svg viewBox="0 0 24 24" style={css('width: 11px; height: 11px;')} fill="none" stroke="#e63946" strokeWidth="3.2" strokeLinecap="round">
-              <path d="M18 6 6 18"></path>
-              <path d="m6 6 12 12"></path>
-            </svg>
-          </span>
-          Exit match
-        </Pressable>
       </div>
 
       <div style={css('flex: 1; display: flex; justify-content: flex-end;')}>
