@@ -96,18 +96,18 @@ export function ClashStage() {
           <>
             <div
               style={css(
-                'position: absolute; left: 50%; top: 165px; width: 300px; height: 300px; margin: -150px 0 0 -150px; border-radius: 999px; border: 4px solid rgba(246,201,69,0.6); opacity: 0; animation: glowRing 1.4s ease-out 0.5s infinite both; pointer-events: none;',
+                'position: absolute; left: 50%; top: 205px; width: 300px; height: 300px; margin: -150px 0 0 -150px; border-radius: 999px; border: 4px solid rgba(246,201,69,0.6); opacity: 0; animation: glowRing 1.4s ease-out 0.5s infinite both; pointer-events: none;',
               )}
             ></div>
             <div
               style={css(
-                'position: absolute; left: 50%; top: 165px; width: 300px; height: 300px; margin: -150px 0 0 -150px; border-radius: 999px; border: 4px solid rgba(246,201,69,0.4); opacity: 0; animation: glowRing 1.4s ease-out 1.1s infinite both; pointer-events: none;',
+                'position: absolute; left: 50%; top: 205px; width: 300px; height: 300px; margin: -150px 0 0 -150px; border-radius: 999px; border: 4px solid rgba(246,201,69,0.4); opacity: 0; animation: glowRing 1.4s ease-out 1.1s infinite both; pointer-events: none;',
               )}
             ></div>
-            <span style={css('position: absolute; left: 50%; top: -72px; margin-left: -33px; z-index: 6; transform: rotate(-12deg); pointer-events: none;')}>
+            <span style={css('position: absolute; left: 50%; top: 4px; margin-left: -26px; z-index: 6; transform: rotate(-12deg); pointer-events: none;')}>
               <span
                 style={css(
-                  'display: inline-block; font-size: 66px; line-height: 1; animation: beatDrop 0.55s cubic-bezier(0.25, 1.2, 0.4, 1) 0.75s both; filter: drop-shadow(0 8px 14px rgba(34,36,42,0.25));',
+                  'display: inline-block; font-size: 50px; line-height: 1; animation: beatDrop 0.55s cubic-bezier(0.25, 1.2, 0.4, 1) 0.75s both; filter: drop-shadow(0 8px 14px rgba(34,36,42,0.25));',
                 )}
               >
                 👑
@@ -224,7 +224,7 @@ export function ClashStage() {
         ))}
       </div>
 
-      <div style={css('height: 110px; display: flex; justify-content: center; align-items: flex-start;')}>
+      <div style={css('min-height: 110px; display: flex; justify-content: center; align-items: flex-start;')}>
         {vm.verdictShown && <VerdictBanner vm={vm} />}
       </div>
       </FitStage>

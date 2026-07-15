@@ -178,14 +178,14 @@ export class GameEngine {
     {
       emoji: '🧠',
       tint: 'rgba(255,107,87,0.14)',
-      title: 'Any word is a weapon',
+      title: 'Any word is a throw',
       body: 'Forget rock, paper, scissors. Type literally anything — an object, an animal, a force of nature, even an abstract idea like “gravity” or “Monday”.',
     },
     {
       emoji: '🔒',
       tint: 'rgba(238,181,47,0.16)',
       title: 'Lock it in before the clock',
-      body: 'Hit Enter or the GO button to commit your weapon. Your opponent picks one at the same time — in secret — so bluff wisely.',
+      body: 'Hit Enter or the GO button to commit your throw. Your opponent picks one at the same time — in secret — so bluff wisely.',
     },
     {
       emoji: '⚖️',
@@ -207,7 +207,7 @@ export class GameEngine {
       place: 'bottom',
       num: 1,
       gate: 'typed',
-      title: 'Type your weapon',
+      title: 'Type your throw',
       text: 'This is your battle box. Type any word you like — an object, an animal, even an idea. Anything can win!',
       cta: 'Next',
     },
@@ -224,7 +224,7 @@ export class GameEngine {
       place: 'left',
       num: 3,
       title: 'Lock it in',
-      text: 'Happy with your weapon? Press GO (or hit Enter) to commit it and start the clash.',
+      text: 'Happy with your throw? Press GO (or hit Enter) to commit it and start the clash.',
       wait: 'Press GO to lock in',
     },
     { hidden: true },
@@ -233,7 +233,7 @@ export class GameEngine {
       place: 'bottom',
       num: 4,
       title: 'The verdict is in',
-      text: "Both weapons clashed and the AI referee crowned a winner — the score updates up here. First to 2 rounds takes the match. That's it — you're ready!",
+      text: "Both throws clashed and the AI referee crowned a winner — the score updates up here. First to 2 rounds takes the match. That's it — you're ready!",
       cta: 'Finish',
     },
   ]
@@ -615,8 +615,8 @@ export class GameEngine {
       background: this.grad(c),
       border: '3px solid rgba(255,255,255,0.5)',
       boxShadow:
-        '0 24px 54px ' +
-        this.shadowOf(c, 42) +
+        '0 16px 36px ' +
+        this.shadowOf(c, 30) +
         ', inset 0 0 0 2px rgba(34,36,42,0.16), inset 0 3px 12px rgba(255,255,255,0.4), inset 0 -18px 34px rgba(34,36,42,0.16)',
       display: 'flex',
       flexDirection: 'column',
@@ -853,7 +853,8 @@ export class GameEngine {
 
   wordStyle(word: string): CSSProperties {
     const len = (word || '').length
-    const size = len > 16 ? 22 : len > 11 ? 26 : len > 7 ? 30 : 34
+    // Shrink to keep the throw on a single line (never wrap); input length is capped.
+    const size = Math.max(15, Math.min(34, Math.round(300 / Math.max(len, 1))))
     return {
       fontSize: size + 'px',
       fontWeight: 900,
@@ -863,7 +864,8 @@ export class GameEngine {
       lineHeight: 1.1,
       letterSpacing: '0.02em',
       textShadow: '0 3px 10px rgba(0,0,0,0.18)',
-      overflowWrap: 'anywhere',
+      whiteSpace: 'nowrap',
+      maxWidth: '100%',
     }
   }
 
@@ -1519,7 +1521,7 @@ export class GameEngine {
 
   private validate(raw: string): string | null {
     const v = raw.trim()
-    if (!v) return 'Type a weapon first!'
+    if (!v) return 'Type a throw first!'
     if (!/^[A-Za-z0-9'’\- ]+$/.test(v)) return 'Letters and numbers only'
     if (v.length > 24) return 'Too long — max 24 characters'
     if (v.length < 2) return 'A bit more effort than that…'
@@ -1600,7 +1602,7 @@ export class GameEngine {
       return {
         outcome: 'opp',
         headline: oppThrow.toUpperCase() + ' punishes HESITATION',
-        flavor: 'You never threw a weapon. Hesitation, famously, is not a weapon.',
+        flavor: 'You never threw a throw. Hesitation, famously, is not a throw.',
       }
     }
     return resolveThrow(yourThrow, oppThrow)

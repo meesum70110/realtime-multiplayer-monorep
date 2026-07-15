@@ -8,12 +8,12 @@ export function VerdictBanner({ vm }: { vm: ViewModel }) {
   return (
     <div
       style={css(
-        'display: flex; flex-direction: column; align-items: center; gap: 12px; background: #fffdfa; border: 3px solid #22242a; border-radius: 30px; padding: 26px 48px 24px; margin-top: -40px; position: relative; z-index: 5; box-shadow: 7px 9px 0 rgba(34,36,42,0.14); animation: riseFade 0.45s ease 0.25s both;',
+        'display: flex; flex-direction: column; align-items: center; gap: 9px; background: #fffdfa; border: 3px solid #22242a; border-radius: 26px; padding: 18px 34px 16px; margin-top: -26px; position: relative; z-index: 5; box-shadow: 7px 9px 0 rgba(34,36,42,0.14); animation: verdictPop 0.5s cubic-bezier(0.22, 1.2, 0.36, 1) 0.15s both;',
       )}
     >
       <h2
         style={css(
-          'margin: 0; font-size: 38px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.02em; text-align: center; max-width: 940px; display: flex; flex-wrap: wrap; justify-content: center; gap: 0 14px;',
+          'margin: 0; font-size: 30px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.02em; text-align: center; max-width: 820px; display: flex; flex-wrap: wrap; justify-content: center; gap: 0 10px;',
         )}
       >
         {vm.headlineWords.map((w, i) => (
@@ -24,7 +24,7 @@ export function VerdictBanner({ vm }: { vm: ViewModel }) {
       </h2>
       <p
         style={css(
-          'margin: 0; font-size: 18px; font-weight: 700; color: #6b7280; max-width: 720px; text-align: center; line-height: 1.45; animation: riseFade 0.5s ease 1s both;',
+          'margin: 0; font-size: 14.5px; font-weight: 700; color: #6b7280; max-width: 600px; text-align: center; line-height: 1.4; animation: riseFade 0.5s ease 0.9s both;',
         )}
       >
         {vm.flavor}

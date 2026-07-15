@@ -2,7 +2,7 @@ import { css } from '@/lib/css'
 import { Pressable } from '@/lib/Pressable'
 import type { ViewModel } from '@rpsa/game-core'
 
-/** Left column: the "Top Weapons" global-meta leaderboard — champion tile plus the
+/** Left column: the "Top Throws" global-meta leaderboard — champion tile plus the
  *  ranked rest (design lines 588–616). Badge and win-rate chip styles are computed
  *  per row in the view-model (`w.badgeStyle` / `w.wrStyle`). */
 export function MenuLeaderboard({ vm }: { vm: ViewModel }) {
@@ -25,7 +25,7 @@ export function MenuLeaderboard({ vm }: { vm: ViewModel }) {
             'font-size: 13px; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; color: #22242a;',
           )}
         >
-          Top Weapons
+          Top Throws
         </span>
       </div>
       <span

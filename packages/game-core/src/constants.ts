@@ -57,7 +57,7 @@ export const IDEAS: readonly string[] = ['Volcano', 'Magnet', 'Tsunami', 'Banana
 
 export const VERBS: readonly string[] = ['crushes', 'obliterates', 'outwits', 'evaporates', 'devours', 'short-circuits', 'flattens', 'hypnotizes', 'disarms', 'vaporizes', 'out-vibes', 'neutralizes']
 
-export const TIE_FLAVORS: readonly string[] = ['An unstoppable force meets an immovable object.', 'Perfectly balanced. Nobody scores — run it back.', 'The universe refuses to pick a side.', 'Both weapons quietly agreed to a ceasefire.']
+export const TIE_FLAVORS: readonly string[] = ['An unstoppable force meets an immovable object.', 'Perfectly balanced. Nobody scores — run it back.', 'The universe refuses to pick a side.', 'Both throws quietly agreed to a ceasefire.']
 
 export const COUNTRIES: readonly Country[] = [['🇺🇸', 'USA'], ['🇮🇳', 'India'], ['🇯🇵', 'Japan'], ['🇧🇷', 'Brazil'], ['🇩🇪', 'Germany'], ['🇫🇷', 'France'], ['🇬🇧', 'UK'], ['🇰🇷', 'Korea'], ['🇨🇦', 'Canada'], ['🇦🇺', 'Australia'], ['🇲🇽', 'Mexico'], ['🇪🇸', 'Spain'], ['🇮🇹', 'Italy'], ['🇳🇬', 'Nigeria'], ['🇸🇪', 'Sweden'], ['🇹🇷', 'Türkiye']]
 

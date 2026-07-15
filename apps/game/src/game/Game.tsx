@@ -36,7 +36,7 @@ export function Game() {
   return (
     <div
       style={css(
-        "min-height: 100vh; background: #fdf3e5; font-family: 'Inter', sans-serif; color: #22242a; display: flex; flex-direction: column; overflow: hidden; position: relative;",
+        "height: 100vh; background: #fdf3e5; font-family: 'Inter', sans-serif; color: #22242a; display: flex; flex-direction: column; overflow: hidden; position: relative;",
       )}
     >
       <ArenaBackground />
@@ -58,7 +58,7 @@ export function Game() {
 
       <main
         style={css(
-          'flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px clamp(12px, 4vw, 48px) 28px; position: relative; z-index: 2;',
+          'flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px clamp(12px, 4vw, 48px) 28px; position: relative; z-index: 2;',
         )}
       >
         {vm.showMenu && (

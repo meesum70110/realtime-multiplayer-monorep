@@ -20,7 +20,7 @@ export function ForgeInput({ vm }: { vm: ViewModel }) {
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           placeholder="type anything…"
-          maxLength={28}
+          maxLength={18}
           spellCheck={false}
           autoComplete="off"
           style={{

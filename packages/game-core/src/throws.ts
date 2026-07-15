@@ -78,7 +78,7 @@ export type ValidationResult = { ok: true; word: string } | { ok: false; error: 
 
 export function validate(raw: string): ValidationResult {
   const v = raw.trim()
-  if (!v) return { ok: false, error: 'Type a weapon first!' }
+  if (!v) return { ok: false, error: 'Type a throw first!' }
   if (!/^[A-Za-z0-9'’\- ]+$/.test(v)) return { ok: false, error: 'Letters and numbers only' }
   if (v.length > 24) return { ok: false, error: 'Too long — max 24 characters' }
   if (v.length < 2) return { ok: false, error: 'A bit more effort than that…' }

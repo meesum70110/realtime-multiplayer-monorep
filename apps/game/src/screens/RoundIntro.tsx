@@ -1,7 +1,7 @@
 import { useView } from '@/store/useGameStore'
 import { css } from '@/lib/css'
 
-/** Round-1 chant (design lines 795–852): "Type anything · Best weapon wins" over a
+/** Round-1 chant (design lines 795–852): "Type anything · Best throw wins" over a
  *  cycling reveal of Rock → Paper → Scissors → the morphing "ANYTHING!" card. */
 export function RoundIntro() {
   const vm = useView()
@@ -15,7 +15,7 @@ export function RoundIntro() {
           'margin: 0; font-size: 16px; font-weight: 800; letter-spacing: 0.22em; text-transform: uppercase; color: #9ca3af; animation: riseFade 0.5s ease 0.15s both;',
         )}
       >
-        Type anything · Best weapon wins
+        Type anything · Best throw wins
       </p>
       <div style={css('height: 350px; display: flex; align-items: center; justify-content: center; margin-top: 4px;')}>
         {vm.beatRock && (

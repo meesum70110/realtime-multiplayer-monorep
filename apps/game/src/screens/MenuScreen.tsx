@@ -7,7 +7,7 @@ import { MenuActions } from './menu/MenuActions'
 import { MenuLiveClashes } from './menu/MenuLiveClashes'
 
 /** Main menu (design lines 552–717): a live-players + profile top bar over a three-column
- *  hub — Top Weapons leaderboard, the logo/CTA/nav center, and the live clashes feed. */
+ *  hub — Top Throws leaderboard, the logo/CTA/nav center, and the live clashes feed. */
 export function MenuScreen() {
   const vm = useView()
   return (

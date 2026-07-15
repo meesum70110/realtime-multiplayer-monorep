@@ -44,7 +44,7 @@ export function TutorialConfirm() {
         </h3>
         <p style={css('margin: 0; font-size: 14.5px; font-weight: 600; color: #6b7280; line-height: 1.55; text-align: center; max-width: 350px;')}>
           We'll drop you into a friendly practice match against a training bot and guide you through every step —
-          picking a weapon, locking in, and reading the clash. Take as long as you like.
+          picking a throw, locking in, and reading the clash. Take as long as you like.
         </p>
         <div style={css('display: flex; align-items: center; gap: 10px; background: #fbf5ec; border-radius: 14px; padding: 11px 16px; width: 100%; box-sizing: border-box;')}>
           <span style={css('font-size: 18px;')}>🤖</span>

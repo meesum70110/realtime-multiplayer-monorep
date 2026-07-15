@@ -270,7 +270,7 @@ export function paneWrap(mode: 'typing' | 'break'): CSSProperties {
     zIndex: 2,
     pointerEvents: 'none',
     filter:
-      'drop-shadow(0 6px 20px rgba(0,201,184,0.42)) drop-shadow(0 2px 4px rgba(34,36,42,0.14))',
+      'drop-shadow(0 8px 16px rgba(0,201,184,0.3)) drop-shadow(0 2px 4px rgba(34,36,42,0.12))',
   }
   if (mode === 'typing') {
     base.transformOrigin = 'center bottom'

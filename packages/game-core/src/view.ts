@@ -380,14 +380,14 @@ export function buildView(engine: GameEngine): ViewModel {
         ? [
             { label: 'Matches', value: '128' },
             { label: 'Win rate', value: '61%' },
-            { label: 'Fav weapon', value: 'Volcano' },
+            { label: 'Fav throw', value: 'Volcano' },
             { label: 'Member since', value: '2024' },
           ]
         : s.profileView === 'friend'
           ? [
               { label: 'Matches', value: (s.profileFriend && s.profileFriend.matches) || '—' },
               { label: 'Win rate', value: (s.profileFriend && s.profileFriend.wr) || '—' },
-              { label: 'Fav weapon', value: (s.profileFriend && s.profileFriend.fav) || '—' },
+              { label: 'Fav throw', value: (s.profileFriend && s.profileFriend.fav) || '—' },
               { label: 'Status', value: s.profileFriend && s.profileFriend.online ? 'Online' : 'Offline' },
             ]
           : [
@@ -556,11 +556,11 @@ export function buildView(engine: GameEngine): ViewModel {
     paneWrapStyle: {
       ...paneWrap('typing'),
       filter:
-        'drop-shadow(0 6px ' +
-        Math.round(16 + s.crackLevel * 26) +
+        'drop-shadow(0 8px ' +
+        Math.round(12 + s.crackLevel * 12) +
         'px rgba(0,201,184,' +
-        (0.4 + s.crackLevel * 0.35).toFixed(2) +
-        ')) drop-shadow(0 2px 4px rgba(34,36,42,0.14))',
+        (0.24 + s.crackLevel * 0.16).toFixed(2) +
+        ')) drop-shadow(0 2px 4px rgba(34,36,42,0.12))',
     },
     crackFlashOn: s.phase === 'typing' && s.crackTick > 0,
     crackTick: s.crackTick,
@@ -572,7 +572,7 @@ export function buildView(engine: GameEngine): ViewModel {
       height: '100%',
       overflow: 'visible',
       filter:
-        'drop-shadow(0 0 1.4px rgba(9,74,79,0.95)) drop-shadow(0 0 6px rgba(255,255,255,0.5))',
+        'drop-shadow(0 0 1.2px rgba(9,74,79,0.9)) drop-shadow(0 0 3px rgba(255,255,255,0.3))',
       animation: bothLocked ? 'crackFlicker 0.3s ease-in-out infinite' : 'none',
     },
     paneOutlinePts: s.pane.outline,
@@ -671,13 +671,15 @@ export function buildView(engine: GameEngine): ViewModel {
     },
     forgeWord,
     forgeWordStyle: {
-      fontSize: (flen > 14 ? 20 : flen > 9 ? 24 : 28) + 'px',
+      // Shrink to keep the throw on a single line (never wrap); input length is capped.
+      fontSize: Math.max(14, Math.min(28, Math.round(280 / Math.max(flen, 1)))) + 'px',
       fontWeight: 900,
       color: '#fff',
       textTransform: 'uppercase',
       textAlign: 'center',
       lineHeight: 1.15,
-      overflowWrap: 'anywhere',
+      whiteSpace: 'nowrap',
+      maxWidth: '100%',
       minHeight: '30px',
     },
 

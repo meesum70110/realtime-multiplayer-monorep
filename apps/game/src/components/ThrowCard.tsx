@@ -31,7 +31,7 @@ export function ThrowCard({ vm }: { vm: ViewModel }) {
             ></div>
           </div>
           <span style={vm.cardSpark}>✦</span>
-          <span style={vm.cardTab}>Your weapon</span>
+          <span style={vm.cardTab}>Your throw</span>
           <span style={vm.cardMedal}>
             <span style={css('display: inline-block; animation: emojiBob 2.6s ease-in-out infinite;')}>
               <span style={vm.liveEmojiStyle}>{vm.liveEmoji}</span>

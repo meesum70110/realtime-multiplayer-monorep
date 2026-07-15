@@ -6,7 +6,8 @@ import { Pressable } from '@/lib/Pressable'
  *  (moved out of the scoreboard header). Opens the exit-confirm dialog. */
 export function ExitMatchButton() {
   const vm = useView()
-  if (!vm.inGame) return null
+  // Only during active typing — hidden through the clash so it can't collide with the verdict card.
+  if (!vm.showTyping) return null
   return (
     <Pressable
       as="button"
