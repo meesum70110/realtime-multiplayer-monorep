@@ -1,5 +1,6 @@
 import { useView } from '@/store/useGameStore'
 import { css } from '@/lib/css'
+import { useIsDesktop, useIsWideDesktop } from '@/lib/useBreakpoint'
 
 import { FitStage } from '@/lib/FitStage'
 import { ArenaBackground } from '@/components/ArenaBackground'
@@ -26,17 +27,20 @@ import { ArenaScreen } from '@/screens/ArenaScreen'
 import { ClashStage } from '@/screens/ClashStage'
 import { EndScreen } from '@/screens/EndScreen'
 
-/** Composition root (design line 110 root `<div>`). Renders the fixed chrome
- *  (background, panic vignette, sound toggle), the overlay stack (design DOM
- *  order, lines 135–467), the in-game scoreboard header (line 468), then the
- *  STAGE `<main>` phase switch (line 548). Each screen/overlay reads the
- *  view-model itself, so this root only routes on the phase/overlay flags. */
+/** Composition root (design line 110 root `<div>`).
+ *
+ *  Lobby: fluid column below 1100px (sizes grow with viewport); FitStage 3-col at >=1100.
+ *  In-game: desktop chrome / FitStage from >=768. */
 export function Game() {
   const vm = useView()
+  const isDesktop = useIsDesktop()
+  const isWideDesktop = useIsWideDesktop()
   return (
     <div
       style={css(
-        "height: 100vh; background: #fdf3e5; font-family: 'Inter', sans-serif; color: #22242a; display: flex; flex-direction: column; overflow: hidden; position: relative;",
+        isDesktop
+          ? "height: 100vh; background: #fdf3e5; font-family: 'Inter', sans-serif; color: #22242a; display: flex; flex-direction: column; overflow: hidden; position: relative;"
+          : "height: 100dvh; max-height: 100dvh; background: #fdf3e5; font-family: 'Inter', sans-serif; color: #22242a; display: flex; flex-direction: column; overflow: hidden; position: relative;",
       )}
     >
       <ArenaBackground />
@@ -58,14 +62,25 @@ export function Game() {
 
       <main
         style={css(
-          'flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px clamp(12px, 4vw, 48px) 28px; position: relative; z-index: 2;',
+          isDesktop
+            ? 'flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; align-items: stretch; justify-content: center; padding: 12px clamp(12px, 3vw, 40px) 20px; position: relative; z-index: 2;'
+            : 'flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; align-items: stretch; justify-content: center; padding: 8px clamp(10px, 3vw, 20px) 16px; position: relative; z-index: 2;',
         )}
       >
-        {vm.showMenu && (
-          <FitStage width={1280}>
-            <MenuScreen />
-          </FitStage>
-        )}
+        {vm.showMenu &&
+          (isWideDesktop ? (
+            <FitStage width={1280}>
+              <MenuScreen />
+            </FitStage>
+          ) : (
+            <div
+              style={css(
+                'width: 100%; height: 100%; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; box-sizing: border-box;',
+              )}
+            >
+              <MenuScreen />
+            </div>
+          ))}
         {vm.showSearching && <MatchmakingScreen />}
         {vm.showIntro && <RoundIntro />}
         {vm.showBanner && <RoundBanner />}
