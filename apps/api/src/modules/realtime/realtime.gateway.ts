@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { Logger } from '@nestjs/common';
 import {
   ConnectedSocket,
@@ -48,7 +50,7 @@ export class RealtimeGateway
       const accessToken = this.extractAccessToken(client);
 
       if (accessToken === null) {
-        client.disconnect(true);
+        await this.acceptAnonymousGuest(client);
         return;
       }
 
@@ -58,22 +60,45 @@ export class RealtimeGateway
       client.data.auth = {
         sessionId: authenticatedSession.session.id,
         userId: authenticatedSession.user.id,
+        isGuest: false,
       };
       client.data.user = authenticatedSession.user;
 
-      await client.join(this.getUserRoom(authenticatedSession.user.id));
-      this.trackConnect(authenticatedSession.user.id, client.id);
-
-      const playersOnline = this.getOnlineUserCount();
-      client.emit('connection_ready', {
-        user_id: authenticatedSession.user.id,
-        players_online: playersOnline,
-      });
-      this.broadcastPresence();
+      await this.finishConnection(client, authenticatedSession.user.id, false);
     } catch {
-      this.logger.warn('Rejected realtime connection');
+      this.logger.warn('Rejected realtime connection (invalid token)');
       client.disconnect(true);
     }
+  }
+
+  /** Tokenless sockets get an ephemeral guest id so presence/health checks can connect. */
+  private async acceptAnonymousGuest(client: AuthenticatedSocket): Promise<void> {
+    const guestUserId = randomUUID();
+
+    client.data.auth = {
+      sessionId: null,
+      userId: guestUserId,
+      isGuest: true,
+    };
+
+    await this.finishConnection(client, guestUserId, true);
+  }
+
+  private async finishConnection(
+    client: AuthenticatedSocket,
+    userId: string,
+    isGuest: boolean,
+  ): Promise<void> {
+    await client.join(this.getUserRoom(userId));
+    this.trackConnect(userId, client.id);
+
+    const playersOnline = this.getOnlineUserCount();
+    client.emit('connection_ready', {
+      user_id: userId,
+      players_online: playersOnline,
+      is_guest: isGuest,
+    });
+    this.broadcastPresence();
   }
 
   handleDisconnect(@ConnectedSocket() client: AuthenticatedSocket): void {

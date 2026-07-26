@@ -5,8 +5,10 @@ import { UserEntity } from '../../modules/auth/entities/user.entity';
 export type AuthenticatedSocket = Socket & {
   data: Socket['data'] & {
     auth?: {
-      sessionId: string;
+      /** Null for anonymous guest sockets that connected without a token. */
+      sessionId: string | null;
       userId: string;
+      isGuest?: boolean;
     };
     user?: UserEntity;
   };
