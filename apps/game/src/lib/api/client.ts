@@ -9,7 +9,19 @@ import type {
   RoundStartRaw,
 } from './types'
 
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace(/\/$/, '')
+/**
+ * Nest mounts REST under the global `api` prefix (`POST /api/auth/guest`).
+ * Production often sets VITE_API_URL to the bare Render origin; ensure `/api`.
+ */
+function resolveApiUrl(): string {
+  let raw = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').trim().replace(/\/$/, '')
+  if (!/\/api$/i.test(raw)) {
+    raw = `${raw}/api`
+  }
+  return raw
+}
+
+const API_URL = resolveApiUrl()
 
 const TOKEN_KEY = 'rpsa-access-token'
 const REFRESH_KEY = 'rpsa-refresh-token'
