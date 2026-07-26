@@ -1,23 +1,37 @@
 import { useView } from '@/store/useGameStore'
 import { css } from '@/lib/css'
+import { useIsDesktop } from '@/lib/useBreakpoint'
 
 /** Round-1 chant (design lines 795–852): "Type anything · Best throw wins" over a
  *  cycling reveal of Rock → Paper → Scissors → the morphing "ANYTHING!" card. */
 export function RoundIntro() {
   const vm = useView()
+  const isDesktop = useIsDesktop()
   return (
     <div
       data-screen-label="Round Intro"
-      style={css('display: flex; flex-direction: column; align-items: center; gap: 18px;')}
+      style={css(
+        isDesktop
+          ? 'display: flex; flex-direction: column; align-items: center; gap: 18px;'
+          : 'display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; max-width: 100vw; min-height: 100%; height: 100%; flex: 1; box-sizing: border-box; padding: 20px 16px; gap: 14px; overflow-x: hidden;',
+      )}
     >
       <p
         style={css(
-          'margin: 0; font-size: 16px; font-weight: 800; letter-spacing: 0.22em; text-transform: uppercase; color: #9ca3af; animation: riseFade 0.5s ease 0.15s both;',
+          isDesktop
+            ? 'margin: 0; font-size: 16px; font-weight: 800; letter-spacing: 0.22em; text-transform: uppercase; color: #9ca3af; animation: riseFade 0.5s ease 0.15s both; text-align: center;'
+            : 'margin: 0; font-size: 13px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #9ca3af; animation: riseFade 0.5s ease 0.15s both; text-align: center; max-width: 100%; padding: 0 8px;',
         )}
       >
         Type anything · Best throw wins
       </p>
-      <div style={css('height: 350px; display: flex; align-items: center; justify-content: center; margin-top: 4px;')}>
+      <div
+        style={css(
+          isDesktop
+            ? 'height: 350px; display: flex; align-items: center; justify-content: center; margin-top: 4px;'
+            : 'min-height: 280px; display: flex; align-items: center; justify-content: center; margin-top: 4px; width: 100%;',
+        )}
+      >
         {vm.beatRock && (
           <div style={css('display: flex; flex-direction: column; align-items: center; gap: 26px;')}>
             <div style={css('transform: rotate(-6deg);')}>
@@ -111,7 +125,13 @@ export function RoundIntro() {
         )}
 
         {vm.beatAnything && (
-          <div style={css('position: relative; display: flex; flex-direction: column; align-items: center; gap: 30px;')}>
+          <div
+            style={css(
+              isDesktop
+                ? 'position: relative; display: flex; flex-direction: column; align-items: center; gap: 30px;'
+                : 'position: relative; display: flex; flex-direction: column; align-items: center; gap: 20px; max-width: 90vw; width: 100%; box-sizing: border-box;',
+            )}
+          >
             <div
               style={css(
                 'position: absolute; left: 50%; top: 28%; width: 250px; height: 250px; margin: -125px 0 0 -125px; border-radius: 999px; border: 4px solid rgba(0,184,169,0.4); animation: glowRing 0.8s ease-out 0.32s both; pointer-events: none;',
@@ -134,9 +154,28 @@ export function RoundIntro() {
                 <span style={css('font-size: 96px; font-weight: 900; color: #22242a; line-height: 1;')}>?</span>
               </div>
             </div>
-            <div style={css('display: flex; gap: 3px;')}>
+            <div
+              style={css(
+                isDesktop
+                  ? 'display: flex; gap: 3px;'
+                  : 'display: flex; justify-content: center; align-items: baseline; flex-wrap: nowrap; gap: 1px; max-width: 90vw; width: 100%; box-sizing: border-box; text-align: center; overflow: hidden;',
+              )}
+            >
               {vm.anyLetters.map((L, i) => (
-                <span key={i} style={L.style}>
+                <span
+                  key={i}
+                  style={
+                    isDesktop
+                      ? L.style
+                      : {
+                          ...L.style,
+                          fontSize: 'clamp(2rem, 12vw, 5rem)',
+                          maxWidth: '90vw',
+                          textAlign: 'center',
+                          lineHeight: 1,
+                        }
+                  }
+                >
                   {L.ch}
                 </span>
               ))}

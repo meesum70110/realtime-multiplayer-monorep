@@ -1,26 +1,57 @@
 import { useView } from '@/store/useGameStore'
 import { css } from '@/lib/css'
-import { Pressable } from '@/lib/Pressable'
+import { useIsDesktop } from '@/lib/useBreakpoint'
+import { useDraggableFab } from '@/lib/useDraggableFab'
+import { FAB_DOCK, useFabSize } from '@/lib/fabDock'
 
-/** Fixed bottom-left sound toggle (design lines 127–134). The button lift on
- *  hover is the design's `style-hover` transform, so it goes through Pressable.
- *  Two mutually-exclusive SVG states render on/off; SVG attrs are camelCased. */
+/** Fixed sound toggle (design lines 127–134). Draggable — users can park it
+ *  anywhere; position is remembered. Tap still toggles mute. */
 export function SoundToggle() {
   const vm = useView()
+  const isDesktop = useIsDesktop()
+  const size = useFabSize()
+  const drag = useDraggableFab({
+    storageKey: 'rpsa-fab-mute',
+    defaultLeft: isDesktop ? FAB_DOCK.edgeDesktop : FAB_DOCK.edgeMobile,
+    defaultBottom: isDesktop ? FAB_DOCK.bottomDesktop : FAB_DOCK.bottomMobile,
+    width: size,
+    height: size,
+    zIndex: isDesktop ? 55 : 999,
+    onTap: vm.onToggleSound,
+  })
+
+  if (!drag.ready || !drag.shellStyle) return null
+
   return (
-    <Pressable
-      as="button"
+    <button
+      type="button"
       aria-label="Toggle sound"
-      onClick={vm.onToggleSound}
-      baseStyle={css(
-        'position: fixed; left: 22px; bottom: 22px; z-index: 55; width: 52px; height: 52px; border-radius: 999px; background: #fffdfa; border: none; cursor: pointer; box-shadow: 0 2px 8px rgba(34,36,42,0.06), 0 12px 28px rgba(34,36,42,0.12); display: flex; align-items: center; justify-content: center; transition: transform 0.12s ease;',
-      )}
-      hoverStyle={css('transform: translateY(-2px) scale(1.05);')}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: 999,
+        background: '#fffdfa',
+        border: 'none',
+        boxShadow: isDesktop
+          ? '0 2px 8px rgba(34,36,42,0.06), 0 12px 28px rgba(34,36,42,0.12)'
+          : '0 2px 8px rgba(34,36,42,0.06), 0 10px 22px rgba(34,36,42,0.12)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        boxSizing: 'border-box',
+        // shellStyle last so position:fixed + shared dock always wins
+        ...drag.shellStyle,
+      }}
+      {...drag.handlers}
     >
       {vm.soundOn && (
         <svg
           viewBox="0 0 24 24"
-          style={css('width: 22px; height: 22px;')}
+          style={css(
+            isDesktop
+              ? 'width: 22px; height: 22px; pointer-events: none;'
+              : 'width: 18px; height: 18px; pointer-events: none;',
+          )}
           fill="none"
           stroke="#22242a"
           strokeWidth="2"
@@ -35,7 +66,11 @@ export function SoundToggle() {
       {vm.soundOff && (
         <svg
           viewBox="0 0 24 24"
-          style={css('width: 22px; height: 22px;')}
+          style={css(
+            isDesktop
+              ? 'width: 22px; height: 22px; pointer-events: none;'
+              : 'width: 18px; height: 18px; pointer-events: none;',
+          )}
           fill="none"
           stroke="#9ca3af"
           strokeWidth="2"
@@ -47,6 +82,6 @@ export function SoundToggle() {
           <line x1="16" x2="22" y1="9" y2="15"></line>
         </svg>
       )}
-    </Pressable>
+    </button>
   )
 }

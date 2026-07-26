@@ -1,20 +1,27 @@
 import { useView } from '@/store/useGameStore'
 import { css } from '@/lib/css'
 import { Pressable } from '@/lib/Pressable'
+import { useIsDesktop } from '@/lib/useBreakpoint'
 
 /** Matchmaking (design lines 719–792): a spinner "finding an opponent" state that
- *  resolves into the you-vs-DOOM_BOT face-off with a match-start countdown. */
+ *  resolves into the you-vs-DOOM_BOT face-off with a match-start countdown.
+ *  Mobile (< 768px) shrinks profile cards so YOU / VS / RIVAL stay inside the viewport. */
 export function MatchmakingScreen() {
   const vm = useView()
+  const isDesktop = useIsDesktop()
   return (
     <div
       data-screen-label="Matchmaking"
-      style={css('display: flex; flex-direction: column; align-items: center; gap: 24px;')}
+      style={css(
+        isDesktop
+          ? 'display: flex; flex-direction: column; align-items: center; gap: 24px;'
+          : 'display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; max-width: 100vw; min-height: 100%; height: 100%; flex: 1; box-sizing: border-box; padding: 20px 16px; overflow-x: hidden; gap: 20px;',
+      )}
     >
       {vm.searchIsSearching && (
         <div
           style={css(
-            'display: flex; flex-direction: column; align-items: center; gap: 24px; animation: riseFade 0.4s ease both;',
+            'display: flex; flex-direction: column; align-items: center; gap: 24px; animation: riseFade 0.4s ease both; width: 100%; max-width: 100%;',
           )}
         >
           <div
@@ -24,12 +31,14 @@ export function MatchmakingScreen() {
           ></div>
           <h2
             style={css(
-              'margin: 0; font-size: 34px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.04em;',
+              isDesktop
+                ? 'margin: 0; font-size: 34px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.04em;'
+                : 'margin: 0; font-size: 24px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.04em; text-align: center; max-width: 100%;',
             )}
           >
             Finding an opponent…
           </h2>
-          <p style={css('margin: 0; font-size: 15px; font-weight: 700; color: #6b7280;')}>
+          <p style={css('margin: 0; font-size: 15px; font-weight: 700; color: #6b7280; text-align: center;')}>
             {vm.playersOnline} players in the arena
           </p>
           <Pressable
@@ -48,40 +57,62 @@ export function MatchmakingScreen() {
       {vm.searchIsFound && (
         <div
           data-screen-label="Face-off"
-          style={css('display: flex; flex-direction: column; align-items: center; gap: 22px;')}
+          style={css(
+            isDesktop
+              ? 'display: flex; flex-direction: column; align-items: center; gap: 22px;'
+              : 'display: flex; flex-direction: column; align-items: center; gap: 18px; width: 100%; max-width: 100vw; box-sizing: border-box;',
+          )}
         >
           <div
             style={css(
-              'display: inline-flex; align-items: center; gap: 11px; background: #22242a; color: #fffdfa; border-radius: 999px; padding: 11px 30px; font-weight: 900; font-size: 16px; letter-spacing: 0.2em; text-transform: uppercase; box-shadow: 4px 6px 0 rgba(34,36,42,0.16); animation: slamIn 0.5s cubic-bezier(0.22, 1.4, 0.36, 1) both;',
+              isDesktop
+                ? 'display: inline-flex; align-items: center; gap: 11px; background: #22242a; color: #fffdfa; border-radius: 999px; padding: 11px 30px; font-weight: 900; font-size: 16px; letter-spacing: 0.2em; text-transform: uppercase; box-shadow: 4px 6px 0 rgba(34,36,42,0.16); animation: slamIn 0.5s cubic-bezier(0.22, 1.4, 0.36, 1) both;'
+                : 'display: inline-flex; align-items: center; gap: 8px; background: #22242a; color: #fffdfa; border-radius: 999px; padding: 10px 18px; font-weight: 900; font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; box-shadow: 4px 6px 0 rgba(34,36,42,0.16); animation: slamIn 0.5s cubic-bezier(0.22, 1.4, 0.36, 1) both; max-width: 100%; box-sizing: border-box;',
             )}
           >
             <span
               style={css(
-                'width: 10px; height: 10px; border-radius: 999px; background: #57c94f; animation: pulseDot 1.6s ease-out infinite;',
+                'width: 10px; height: 10px; border-radius: 999px; background: #57c94f; animation: pulseDot 1.6s ease-out infinite; flex-shrink: 0;',
               )}
             ></span>
             Match Found
           </div>
 
-          <div style={css('display: flex; align-items: center; justify-content: center; gap: 28px;')}>
+          <div
+            style={css(
+              isDesktop
+                ? 'display: flex; align-items: center; justify-content: center; gap: 28px;'
+                : 'display: flex; align-items: stretch; justify-content: center; gap: 8px; width: 100%; max-width: 100vw; box-sizing: border-box; padding: 0 4px;',
+            )}
+          >
             <div
               style={css(
-                'position: relative; background: #fffdfa; border: 3px solid #22242a; border-radius: 30px; padding: 28px 22px 20px; box-shadow: 6px 9px 0 rgba(34,36,42,0.14); display: flex; flex-direction: column; align-items: center; gap: 11px; width: 246px; box-sizing: border-box; animation: faceoffL 0.55s cubic-bezier(0.25, 1.1, 0.4, 1) both;',
+                isDesktop
+                  ? 'position: relative; background: #fffdfa; border: 3px solid #22242a; border-radius: 30px; padding: 28px 22px 20px; box-shadow: 6px 9px 0 rgba(34,36,42,0.14); display: flex; flex-direction: column; align-items: center; gap: 11px; width: 246px; box-sizing: border-box; animation: faceoffL 0.55s cubic-bezier(0.25, 1.1, 0.4, 1) both;'
+                  : 'position: relative; background: #fffdfa; border: 3px solid #22242a; border-radius: 22px; padding: 22px 8px 14px; box-shadow: 4px 6px 0 rgba(34,36,42,0.14); display: flex; flex-direction: column; align-items: center; gap: 8px; width: 130px; max-width: 130px; flex: 0 1 130px; box-sizing: border-box; animation: faceoffL 0.55s cubic-bezier(0.25, 1.1, 0.4, 1) both; min-width: 0;',
               )}
             >
               <span
                 style={css(
-                  'position: absolute; top: -15px; left: 50%; transform: translateX(-50%) rotate(-2.5deg); background: #00c9b8; border: 3px solid #22242a; border-radius: 11px; padding: 5px 16px; font-size: 11px; font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase; color: #06312d; box-shadow: 2px 3px 0 rgba(34,36,42,0.16); white-space: nowrap;',
+                  isDesktop
+                    ? 'position: absolute; top: -15px; left: 50%; transform: translateX(-50%) rotate(-2.5deg); background: #00c9b8; border: 3px solid #22242a; border-radius: 11px; padding: 5px 16px; font-size: 11px; font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase; color: #06312d; box-shadow: 2px 3px 0 rgba(34,36,42,0.16); white-space: nowrap;'
+                    : 'position: absolute; top: -12px; left: 50%; transform: translateX(-50%) rotate(-2.5deg); background: #00c9b8; border: 2.5px solid #22242a; border-radius: 10px; padding: 4px 10px; font-size: 10px; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; color: #06312d; box-shadow: 2px 3px 0 rgba(34,36,42,0.16); white-space: nowrap;',
                 )}
               >
                 You
               </span>
               <span
                 style={css(
-                  'width: 96px; height: 96px; border-radius: 999px; background: #fbf1e4; border: 3px solid #22242a; box-shadow: 3px 4px 0 rgba(34,36,42,0.14); display: flex; align-items: center; justify-content: center; margin-top: 6px;',
+                  isDesktop
+                    ? 'width: 96px; height: 96px; border-radius: 999px; background: #fbf1e4; border: 3px solid #22242a; box-shadow: 3px 4px 0 rgba(34,36,42,0.14); display: flex; align-items: center; justify-content: center; margin-top: 6px;'
+                    : 'width: 64px; height: 64px; border-radius: 999px; background: #fbf1e4; border: 2.5px solid #22242a; box-shadow: 2px 3px 0 rgba(34,36,42,0.14); display: flex; align-items: center; justify-content: center; margin-top: 4px; flex-shrink: 0;',
                 )}
               >
-                <svg viewBox="0 0 64 64" style={css('width: 58px; height: 58px;')} aria-label="Your avatar">
+                <svg
+                  viewBox="0 0 64 64"
+                  style={css(isDesktop ? 'width: 58px; height: 58px;' : 'width: 40px; height: 40px;')}
+                  aria-label="Your avatar"
+                >
                   <defs>
                     <linearGradient id="skinF" x1="0%" y1="0%" x2="100%" y2="100%">
                       <stop offset="0%" stopColor="#5eead4"></stop>
@@ -102,29 +133,57 @@ export function MatchmakingScreen() {
               </span>
               <span
                 style={css(
-                  'font-weight: 900; font-size: 21px; letter-spacing: 0.05em; text-transform: uppercase; color: #22242a;',
+                  isDesktop
+                    ? 'font-weight: 900; font-size: 21px; letter-spacing: 0.05em; text-transform: uppercase; color: #22242a;'
+                    : 'font-weight: 900; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: #22242a; text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;',
                 )}
               >
                 {vm.playerName}
               </span>
-              <div style={css('display: flex; align-items: center; gap: 8px; background: #fbf5ec; border-radius: 999px; padding: 5px 14px;')}>
-                <span style={css('font-size: 22px; line-height: 1;')}>{vm.youFlag}</span>
-                <span style={css('font-size: 13px; font-weight: 800; color: #6b7280;')}>{vm.youCountryName}</span>
+              <div
+                style={css(
+                  isDesktop
+                    ? 'display: flex; align-items: center; gap: 8px; background: #fbf5ec; border-radius: 999px; padding: 5px 14px;'
+                    : 'display: flex; align-items: center; justify-content: center; gap: 4px; background: #fbf5ec; border-radius: 999px; padding: 4px 8px; max-width: 100%; box-sizing: border-box;',
+                )}
+              >
+                <span style={css(isDesktop ? 'font-size: 22px; line-height: 1;' : 'font-size: 16px; line-height: 1;')}>
+                  {vm.youFlag}
+                </span>
+                {isDesktop && (
+                  <span style={css('font-size: 13px; font-weight: 800; color: #6b7280;')}>{vm.youCountryName}</span>
+                )}
               </div>
             </div>
 
-            <div style={css('position: relative; display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 96px;')}>
+            <div
+              style={css(
+                isDesktop
+                  ? 'position: relative; display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 96px;'
+                  : 'position: relative; display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 56px; align-self: center;',
+              )}
+            >
               <div
                 style={css(
-                  'position: absolute; left: 50%; top: 50%; width: 128px; height: 128px; margin: -64px 0 0 -64px; border-radius: 999px; border: 3px solid rgba(255,210,51,0.5); animation: glowRing 1.6s ease-out 0.5s infinite both; pointer-events: none;',
+                  isDesktop
+                    ? 'position: absolute; left: 50%; top: 50%; width: 128px; height: 128px; margin: -64px 0 0 -64px; border-radius: 999px; border: 3px solid rgba(255,210,51,0.5); animation: glowRing 1.6s ease-out 0.5s infinite both; pointer-events: none;'
+                    : 'position: absolute; left: 50%; top: 50%; width: 72px; height: 72px; margin: -36px 0 0 -36px; border-radius: 999px; border: 2.5px solid rgba(255,210,51,0.5); animation: glowRing 1.6s ease-out 0.5s infinite both; pointer-events: none;',
                 )}
               ></div>
               <div
                 style={css(
-                  'position: relative; z-index: 2; width: 90px; height: 90px; border-radius: 24px; background: #ffd233; border: 3.5px solid #22242a; box-shadow: 4px 6px 0 rgba(34,36,42,0.18); display: flex; align-items: center; justify-content: center; transform: rotate(-7deg); animation: slamIn 0.5s cubic-bezier(0.22, 1.4, 0.36, 1) 0.26s both;',
+                  isDesktop
+                    ? 'position: relative; z-index: 2; width: 90px; height: 90px; border-radius: 24px; background: #ffd233; border: 3.5px solid #22242a; box-shadow: 4px 6px 0 rgba(34,36,42,0.18); display: flex; align-items: center; justify-content: center; transform: rotate(-7deg); animation: slamIn 0.5s cubic-bezier(0.22, 1.4, 0.36, 1) 0.26s both;'
+                    : 'position: relative; z-index: 2; width: 52px; height: 52px; border-radius: 16px; background: #ffd233; border: 3px solid #22242a; box-shadow: 3px 4px 0 rgba(34,36,42,0.18); display: flex; align-items: center; justify-content: center; transform: rotate(-7deg); animation: slamIn 0.5s cubic-bezier(0.22, 1.4, 0.36, 1) 0.26s both;',
                 )}
               >
-                <span style={css('font-size: 38px; font-weight: 900; color: #22242a; line-height: 1; display: block; text-align: center;')}>
+                <span
+                  style={css(
+                    isDesktop
+                      ? 'font-size: 38px; font-weight: 900; color: #22242a; line-height: 1; display: block; text-align: center;'
+                      : 'font-size: 20px; font-weight: 900; color: #22242a; line-height: 1; display: block; text-align: center;',
+                  )}
+                >
                   VS
                 </span>
               </div>
@@ -132,24 +191,30 @@ export function MatchmakingScreen() {
 
             <div
               style={css(
-                'position: relative; background: #fffdfa; border: 3px solid #22242a; border-radius: 30px; padding: 28px 22px 20px; box-shadow: 6px 9px 0 rgba(34,36,42,0.14); display: flex; flex-direction: column; align-items: center; gap: 11px; width: 246px; box-sizing: border-box; animation: faceoffR 0.55s cubic-bezier(0.25, 1.1, 0.4, 1) both;',
+                isDesktop
+                  ? 'position: relative; background: #fffdfa; border: 3px solid #22242a; border-radius: 30px; padding: 28px 22px 20px; box-shadow: 6px 9px 0 rgba(34,36,42,0.14); display: flex; flex-direction: column; align-items: center; gap: 11px; width: 246px; box-sizing: border-box; animation: faceoffR 0.55s cubic-bezier(0.25, 1.1, 0.4, 1) both;'
+                  : 'position: relative; background: #fffdfa; border: 3px solid #22242a; border-radius: 22px; padding: 22px 8px 14px; box-shadow: 4px 6px 0 rgba(34,36,42,0.14); display: flex; flex-direction: column; align-items: center; gap: 8px; width: 130px; max-width: 130px; flex: 0 1 130px; box-sizing: border-box; animation: faceoffR 0.55s cubic-bezier(0.25, 1.1, 0.4, 1) both; min-width: 0;',
               )}
             >
               <span
                 style={css(
-                  'position: absolute; top: -15px; left: 50%; transform: translateX(-50%) rotate(2.5deg); background: #ff4d6d; border: 3px solid #22242a; border-radius: 11px; padding: 5px 16px; font-size: 11px; font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase; color: #fffdfa; box-shadow: 2px 3px 0 rgba(34,36,42,0.16); white-space: nowrap;',
+                  isDesktop
+                    ? 'position: absolute; top: -15px; left: 50%; transform: translateX(-50%) rotate(2.5deg); background: #ff4d6d; border: 3px solid #22242a; border-radius: 11px; padding: 5px 16px; font-size: 11px; font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase; color: #fffdfa; box-shadow: 2px 3px 0 rgba(34,36,42,0.16); white-space: nowrap;'
+                    : 'position: absolute; top: -12px; left: 50%; transform: translateX(-50%) rotate(2.5deg); background: #ff4d6d; border: 2.5px solid #22242a; border-radius: 10px; padding: 4px 10px; font-size: 10px; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; color: #fffdfa; box-shadow: 2px 3px 0 rgba(34,36,42,0.16); white-space: nowrap;',
                 )}
               >
                 Rival
               </span>
               <span
                 style={css(
-                  'width: 96px; height: 96px; border-radius: 999px; background: #fbf1e4; border: 3px solid #22242a; box-shadow: 3px 4px 0 rgba(34,36,42,0.14); display: flex; align-items: center; justify-content: center; margin-top: 6px;',
+                  isDesktop
+                    ? 'width: 96px; height: 96px; border-radius: 999px; background: #fbf1e4; border: 3px solid #22242a; box-shadow: 3px 4px 0 rgba(34,36,42,0.14); display: flex; align-items: center; justify-content: center; margin-top: 6px;'
+                    : 'width: 64px; height: 64px; border-radius: 999px; background: #fbf1e4; border: 2.5px solid #22242a; box-shadow: 2px 3px 0 rgba(34,36,42,0.14); display: flex; align-items: center; justify-content: center; margin-top: 4px; flex-shrink: 0;',
                 )}
               >
                 <svg
                   viewBox="0 0 24 24"
-                  style={css('width: 48px; height: 48px;')}
+                  style={css(isDesktop ? 'width: 48px; height: 48px;' : 'width: 32px; height: 32px;')}
                   fill="none"
                   stroke="#22242a"
                   strokeWidth="2"
@@ -167,14 +232,26 @@ export function MatchmakingScreen() {
               </span>
               <span
                 style={css(
-                  'font-weight: 900; font-size: 21px; letter-spacing: 0.05em; text-transform: uppercase; color: #22242a;',
+                  isDesktop
+                    ? 'font-weight: 900; font-size: 21px; letter-spacing: 0.05em; text-transform: uppercase; color: #22242a;'
+                    : 'font-weight: 900; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: #22242a; text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;',
                 )}
               >
                 DOOM_BOT
               </span>
-              <div style={css('display: flex; align-items: center; gap: 8px; background: #fbf5ec; border-radius: 999px; padding: 5px 14px;')}>
-                <span style={css('font-size: 22px; line-height: 1;')}>{vm.oppFlag}</span>
-                <span style={css('font-size: 13px; font-weight: 800; color: #6b7280;')}>{vm.oppCountryName}</span>
+              <div
+                style={css(
+                  isDesktop
+                    ? 'display: flex; align-items: center; gap: 8px; background: #fbf5ec; border-radius: 999px; padding: 5px 14px;'
+                    : 'display: flex; align-items: center; justify-content: center; gap: 4px; background: #fbf5ec; border-radius: 999px; padding: 4px 8px; max-width: 100%; box-sizing: border-box;',
+                )}
+              >
+                <span style={css(isDesktop ? 'font-size: 22px; line-height: 1;' : 'font-size: 16px; line-height: 1;')}>
+                  {vm.oppFlag}
+                </span>
+                {isDesktop && (
+                  <span style={css('font-size: 13px; font-weight: 800; color: #6b7280;')}>{vm.oppCountryName}</span>
+                )}
               </div>
             </div>
           </div>

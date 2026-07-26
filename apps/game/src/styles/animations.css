@@ -86,3 +86,56 @@
 @keyframes dieSpinR { 0% { transform: translate(-185px, 0) rotate(-3deg) scale(1); opacity: 1; } 28% { transform: translate(-168px, -26px) rotate(-170deg) scale(0.9); } 62% { transform: translate(-122px, 14px) rotate(-540deg) scale(0.5); opacity: 0.95; } 100% { transform: translate(-92px, 36px) rotate(-900deg) scale(0.02); opacity: 0; } }
 @keyframes dieBlastL { 0% { transform: translate(185px, 0) rotate(3deg); opacity: 1; } 14% { transform: translate(206px, -12px) rotate(7deg) scale(1.05, 0.95); } 42% { transform: translate(-420px, -90px) rotate(-28deg); opacity: 1; } 100% { transform: translate(-1350px, -150px) rotate(-66deg); opacity: 0.4; } }
 @keyframes dieBlastR { 0% { transform: translate(-185px, 0) rotate(-3deg); opacity: 1; } 14% { transform: translate(-206px, -12px) rotate(-7deg) scale(1.05, 0.95); } 42% { transform: translate(420px, -90px) rotate(28deg); opacity: 1; } 100% { transform: translate(1350px, -150px) rotate(66deg); opacity: 0.4; } }
+
+/* Mobile vertical clash (stacked cards) — pure Y-axis only, no translateX */
+@keyframes clashVertRushTop {
+  0% { transform: translateY(0); }
+  22% { transform: translateY(-14px); }
+  58% { transform: translateY(78px); }
+  82% { transform: translateY(54px); }
+  100% { transform: translateY(58px); }
+}
+@keyframes clashVertRushBot {
+  0% { transform: translateY(0); }
+  22% { transform: translateY(14px); }
+  58% { transform: translateY(-78px); }
+  82% { transform: translateY(-54px); }
+  100% { transform: translateY(-58px); }
+}
+/* Winner settles on the midline (used when card is absolutely centered). */
+@keyframes clashVertWinCenter {
+  0% { transform: scale(0.88); opacity: 1; }
+  45% { transform: scale(1.1); }
+  100% { transform: scale(1.05); opacity: 1; }
+}
+/* Loser knockout — top (opponent) flies UP off-screen. */
+@keyframes clashVertKnockoutTop {
+  0% { transform: translateY(0) scale(1) rotate(0deg); opacity: 1; filter: brightness(1); }
+  18% { transform: translateY(-8%) scale(1.06) rotate(-4deg); opacity: 1; }
+  55% { transform: translateY(-110%) scale(0.92) rotate(-10deg); opacity: 0.85; filter: brightness(0.75); }
+  100% { transform: translateY(-200%) scale(0.8) rotate(-16deg); opacity: 0; filter: brightness(0.45); }
+}
+/* Loser knockout — bottom (player) flies DOWN off-screen. */
+@keyframes clashVertKnockoutBot {
+  0% { transform: translateY(0) scale(1) rotate(0deg); opacity: 1; filter: brightness(1); }
+  18% { transform: translateY(8%) scale(1.06) rotate(4deg); opacity: 1; }
+  55% { transform: translateY(110%) scale(0.92) rotate(10deg); opacity: 0.85; filter: brightness(0.75); }
+  100% { transform: translateY(200%) scale(0.8) rotate(16deg); opacity: 0; filter: brightness(0.45); }
+}
+@keyframes clashVertTieTop {
+  0% { transform: translateY(58px); }
+  55% { transform: translateY(10px); }
+  100% { transform: translateY(0); }
+}
+@keyframes clashVertTieBot {
+  0% { transform: translateY(-58px); }
+  55% { transform: translateY(-10px); }
+  100% { transform: translateY(0); }
+}
+@keyframes clashVertShake {
+  0%, 100% { transform: translateY(0); }
+  20% { transform: translateY(-8px); }
+  40% { transform: translateY(7px); }
+  60% { transform: translateY(-5px); }
+  80% { transform: translateY(3px); }
+}

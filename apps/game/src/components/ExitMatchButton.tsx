@@ -1,19 +1,25 @@
 import { useView } from '@/store/useGameStore'
 import { css } from '@/lib/css'
 import { Pressable } from '@/lib/Pressable'
+import { useIsDesktop, useIsWideDesktop } from '@/lib/useBreakpoint'
 
-/** Forfeit control, pinned to the bottom-center of the screen during a live match
- *  (moved out of the scoreboard header). Opens the exit-confirm dialog. */
+/** Forfeit control during a live typing phase. Desktop: fixed bottom-center.
+ *  Mobile: rendered from the scoreboard header instead (see Scoreboard) so it
+ *  does not cover ForgeInput — this component stays desktop-only. */
 export function ExitMatchButton() {
   const vm = useView()
+  const isDesktop = useIsDesktop()
+  const isWideDesktop = useIsWideDesktop()
   // Only during active typing — hidden through the clash so it can't collide with the verdict card.
-  if (!vm.showTyping) return null
+  if (!vm.showTyping || !isDesktop) return null
   return (
     <Pressable
       as="button"
       onClick={vm.onExit}
       baseStyle={css(
-        "position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 55; display: inline-flex; align-items: center; gap: 7px; background: #fbf1e4; border: none; border-radius: 999px; padding: 9px 18px 9px 11px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #8a7a62; cursor: pointer; box-shadow: 0 2px 8px rgba(34,36,42,0.05), 0 12px 28px rgba(34,36,42,0.1); transition: all 0.15s ease;",
+        isWideDesktop
+          ? "position: fixed; left: 50%; bottom: 48px; transform: translateX(-50%); z-index: 55; display: inline-flex; align-items: center; gap: 7px; background: #fbf1e4; border: none; border-radius: 999px; padding: 9px 18px 9px 11px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #8a7a62; cursor: pointer; box-shadow: 0 2px 8px rgba(34,36,42,0.05), 0 12px 28px rgba(34,36,42,0.1); transition: all 0.15s ease;"
+          : "position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 55; display: inline-flex; align-items: center; gap: 7px; background: #fbf1e4; border: none; border-radius: 999px; padding: 9px 18px 9px 11px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #8a7a62; cursor: pointer; box-shadow: 0 2px 8px rgba(34,36,42,0.05), 0 12px 28px rgba(34,36,42,0.1); transition: all 0.15s ease;",
       )}
       hoverStyle={css('color: #e63946; background: rgba(230,57,70,0.12); transform: translateX(-50%) translateY(-2px);')}
     >

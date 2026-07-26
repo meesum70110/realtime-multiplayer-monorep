@@ -1,17 +1,22 @@
+import type { CSSProperties } from 'react'
 import { css } from '@/lib/css'
 import { Pressable } from '@/lib/Pressable'
 import type { ViewModel } from '@rpsa/game-core'
 
 /** Right column: the live clashes ticker — a feed of recent winner-vs-loser matchups
  *  (design lines 690–713). Each row's border/highlight style is computed in the
- *  view-model (`c.rowStyle`), flashing when a fresh clash arrives. */
-export function MenuLiveClashes({ vm }: { vm: ViewModel }) {
+ *  view-model (`c.rowStyle`), flashing when a fresh clash arrives.
+ *  Optional `style` merges flex layout (basis / order) from MenuScreen. */
+export function MenuLiveClashes({ vm, style }: { vm: ViewModel; style?: CSSProperties }) {
   return (
     <Pressable
       as="aside"
-      baseStyle={css(
-        'width: 268px; box-sizing: border-box; flex-shrink: 0; position: relative; background: #fffdfa; border: 3px solid #22242a; border-radius: 26px; padding: 30px 14px 14px; box-shadow: 5px 8px 0 rgba(34,36,42,0.12); display: flex; flex-direction: column; gap: 12px; transition: transform 0.18s ease, box-shadow 0.18s ease; animation: riseFade 0.5s ease 0.18s both;',
-      )}
+      baseStyle={{
+        ...css(
+          'box-sizing: border-box; position: relative; background: #fffdfa; border: 3px solid #22242a; border-radius: 26px; padding: 30px 14px 14px; box-shadow: 5px 8px 0 rgba(34,36,42,0.12); display: flex; flex-direction: column; gap: 12px; transition: transform 0.18s ease, box-shadow 0.18s ease; animation: riseFade 0.5s ease 0.18s both;',
+        ),
+        ...style,
+      }}
       hoverStyle={css('transform: translateY(-4px); box-shadow: 8px 13px 0 rgba(34,36,42,0.14);')}
     >
       <div

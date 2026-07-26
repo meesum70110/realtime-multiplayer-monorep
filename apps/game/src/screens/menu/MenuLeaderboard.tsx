@@ -1,17 +1,22 @@
+import type { CSSProperties } from 'react'
 import { css } from '@/lib/css'
 import { Pressable } from '@/lib/Pressable'
 import type { ViewModel } from '@rpsa/game-core'
 
 /** Left column: the "Top Throws" global-meta leaderboard — champion tile plus the
  *  ranked rest (design lines 588–616). Badge and win-rate chip styles are computed
- *  per row in the view-model (`w.badgeStyle` / `w.wrStyle`). */
-export function MenuLeaderboard({ vm }: { vm: ViewModel }) {
+ *  per row in the view-model (`w.badgeStyle` / `w.wrStyle`).
+ *  Optional `style` merges flex layout (basis / order) from MenuScreen. */
+export function MenuLeaderboard({ vm, style }: { vm: ViewModel; style?: CSSProperties }) {
   return (
     <Pressable
       as="aside"
-      baseStyle={css(
-        'width: 268px; box-sizing: border-box; flex-shrink: 0; position: relative; background: #fffdfa; border: 3px solid #22242a; border-radius: 26px; padding: 30px 16px 16px; box-shadow: 5px 8px 0 rgba(34,36,42,0.12); display: flex; flex-direction: column; gap: 12px; transition: transform 0.18s ease, box-shadow 0.18s ease; animation: riseFade 0.5s ease 0.1s both;',
-      )}
+      baseStyle={{
+        ...css(
+          'box-sizing: border-box; position: relative; background: #fffdfa; border: 3px solid #22242a; border-radius: 26px; padding: 30px 16px 16px; box-shadow: 5px 8px 0 rgba(34,36,42,0.12); display: flex; flex-direction: column; gap: 12px; transition: transform 0.18s ease, box-shadow 0.18s ease; animation: riseFade 0.5s ease 0.1s both;',
+        ),
+        ...style,
+      }}
       hoverStyle={css('transform: translateY(-4px); box-shadow: 8px 13px 0 rgba(34,36,42,0.14);')}
     >
       <div
