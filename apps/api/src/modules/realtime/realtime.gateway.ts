@@ -13,8 +13,7 @@ import { SessionAuthService } from '../auth/services/session-auth.service';
 
 @WebSocketGateway({
   cors: {
-    credentials: true,
-    origin: true,
+    origin: '*',
   },
   namespace: 'realtime',
 })
