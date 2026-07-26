@@ -11,13 +11,8 @@ async function bootstrap(): Promise<void> {
 
   const apiPrefix = configService.get<string>('app.apiPrefix', 'api');
   const port = configService.get<number>('app.port', 3001);
-  const corsOrigin = configService.get<string[]>('app.corsOrigin', []);
 
   app.setGlobalPrefix(apiPrefix);
-  app.enableCors({
-    origin: corsOrigin,
-    credentials: true,
-  });
   app.useWebSocketAdapter(new IoAdapter(app));
   app.useGlobalPipes(
     new ValidationPipe({
@@ -27,6 +22,12 @@ async function bootstrap(): Promise<void> {
       transform: true,
     }),
   );
+
+  app.enableCors({
+    origin: '*',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+  });
 
   await app.listen(port);
 }
