@@ -15,10 +15,38 @@ import type {
   RoundStartRaw,
 } from '@/lib/api/types'
 
-const WS_URL = (import.meta.env.VITE_WS_URL || 'http://localhost:3001/realtime').replace(
-  /\/$/,
-  '',
-)
+/**
+ * Socket.IO expects an http(s) origin; it upgrades to ws(s) itself.
+ * Nest gateway namespace is `/realtime` (pathname in the URL, not Engine.IO `path`).
+ */
+function resolveRealtimeUrl(): string {
+  const fromEnv = (import.meta.env.VITE_WS_URL as string | undefined)?.trim()
+  const fromApi = (import.meta.env.VITE_API_URL as string | undefined)?.trim()
+
+  let raw =
+    fromEnv ||
+    (fromApi
+      ? fromApi.replace(/\/$/, '').replace(/\/api$/i, '') + '/realtime'
+      : 'http://localhost:3001/realtime')
+
+  // Managers speak http(s); ws(s) in env is a common Vercel misconfig.
+  raw = raw.replace(/^ws:/i, 'http:').replace(/^wss:/i, 'https:')
+
+  if (!/^https?:\/\//i.test(raw)) {
+    raw = `${typeof location !== 'undefined' && location.protocol === 'https:' ? 'https' : 'http'}://${raw}`
+  }
+
+  raw = raw.replace(/\/$/, '')
+
+  // If env is only the Render origin (or …/api), still land on the Nest namespace.
+  if (!/\/realtime$/i.test(raw)) {
+    raw = `${raw.replace(/\/api$/i, '')}/realtime`
+  }
+
+  return raw
+}
+
+const WS_URL = resolveRealtimeUrl()
 
 let socket: Socket | null = null
 let connectionReadyPromise: Promise<string> | null = null
@@ -92,7 +120,11 @@ export function connectRealtime(accessToken?: string): Socket {
   socket = io(WS_URL, {
     autoConnect: true,
     auth: { token },
-    transports: ['websocket', 'polling'],
+    // Polling-first handshake, then upgrade — required for reliable cross-origin
+    // HTTPS→Render. Websocket-first often fails the upgrade and never recovers
+    // without rewriting transports on connect_error.
+    transports: ['polling', 'websocket'],
+    upgrade: true,
     reconnection: true,
     reconnectionAttempts: 8,
     reconnectionDelay: 800,
@@ -159,8 +191,13 @@ export function connectRealtime(accessToken?: string): Socket {
     resetReadyPromise()
   })
 
-  socket.on('connect_error', () => {
-    /* engine degrades to ghost/offline; leave logging to boot */
+  socket.on('connect_error', (err) => {
+    console.warn('[realtime] connect_error', WS_URL, err.message)
+    // If a prior build forced websocket-first, restore the classic upgrade path.
+    const opts = socket?.io?.opts
+    if (opts?.transports?.[0] === 'websocket') {
+      opts.transports = ['polling', 'websocket']
+    }
   })
 
   return socket
