@@ -357,7 +357,10 @@ export class GameEngine {
       soundOn,
       musicOn,
       panicPref,
-      playersOnline: 940 + Math.floor(Math.random() * 300),
+      // Keep live presence from boot/socket; only mock when fully offline.
+      playersOnline: this.transport
+        ? this.state.playersOnline
+        : 940 + Math.floor(Math.random() * 300),
     })
     this.morphTimer = window.setInterval(() => this.morphTick(), 1150)
     this.clashId = 0

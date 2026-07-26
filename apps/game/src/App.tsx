@@ -11,6 +11,7 @@ export default function App() {
     let cancelled = false
 
     ;(async () => {
+      // Runs automatically on load — Find Match only queues once transport is set.
       await bootOnlineSession(engine)
       if (cancelled) return
       engine.mount()
@@ -20,6 +21,8 @@ export default function App() {
     return () => {
       cancelled = true
       engine.unmount()
+      // Only tear down the socket after unmount; avoids racing an in-flight boot
+      // when React Strict Mode remounts in development.
       disconnectRealtime()
     }
   }, [])

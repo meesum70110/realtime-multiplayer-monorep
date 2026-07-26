@@ -359,8 +359,10 @@ async function hydrateMatchFound(raw: MatchFoundRaw): Promise<MatchFoundInfo> {
 }
 
 /**
- * Boots identity + realtime. Returns a transport when online is available,
- * or null so GameEngine stays on the offline bot path.
+ * Boots identity + realtime on app mount (not on Find Match).
+ * Returns a transport when REST guest auth succeeds. Socket readiness is
+ * best-effort: if realtime times out we keep the REST transport so queue /
+ * lobby calls still work, instead of silently dropping to pure offline bots.
  */
 export async function bootOnlineSession(engine: {
   setTransport: (t: MatchTransport | null) => void
@@ -370,19 +372,32 @@ export async function bootOnlineSession(engine: {
     let session = await ensureGuestSession()
     engine.setPlayerIdentity(session.user.displayName, session.user.id)
 
+    // Register handlers BEFORE connect so `connection_ready` / presence are not dropped.
+    const transport = createMatchTransport()
+    engine.setTransport(transport)
+
     connectRealtime(session.accessToken)
 
     try {
-      await waitForConnectionReady(8_000)
-    } catch {
+      await waitForConnectionReady(12_000)
+      console.info('[boot] online session ready (REST + realtime)')
+    } catch (firstErr) {
+      console.warn('[boot] realtime timed out — minting fresh guest and retrying', firstErr)
       session = await createGuestSession()
       engine.setPlayerIdentity(session.user.displayName, session.user.id)
       connectRealtime(session.accessToken)
-      await waitForConnectionReady(8_000)
+      try {
+        await waitForConnectionReady(12_000)
+        console.info('[boot] online session ready after retry (REST + realtime)')
+      } catch (secondErr) {
+        // REST is up (guest worked); keep transport. Socket.io will keep reconnecting.
+        console.warn(
+          '[boot] realtime still unavailable — continuing with REST transport; socket will retry',
+          secondErr,
+        )
+      }
     }
 
-    const transport = createMatchTransport()
-    engine.setTransport(transport)
     return transport
   } catch (err) {
     console.warn('[boot] online session unavailable — falling back to offline bot', err)

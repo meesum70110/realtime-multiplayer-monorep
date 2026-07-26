@@ -111,11 +111,17 @@ export function connectRealtime(accessToken?: string): Socket {
 
   if (socket) {
     socket.auth = { token }
-    if (!socket.connected) socket.connect()
+    if (socket.connected) return socket
+    // Re-arm the ready latch before retrying — otherwise a prior timeout leaves
+    // waitForConnectionReady racing a promise that will never resolve.
+    resetReadyPromise()
+    socket.connect()
     return socket
   }
 
   resetReadyPromise()
+
+  console.info('[realtime] connecting', WS_URL)
 
   socket = io(WS_URL, {
     autoConnect: true,
@@ -131,6 +137,7 @@ export function connectRealtime(accessToken?: string): Socket {
   })
 
   socket.on('connection_ready', (payload: ConnectionReadyRaw) => {
+    console.info('[realtime] connection_ready', payload.user_id)
     connectionReadyResolve?.(payload.user_id)
     handlers.onConnectionReady?.(payload)
     if (typeof payload.players_online === 'number') {
