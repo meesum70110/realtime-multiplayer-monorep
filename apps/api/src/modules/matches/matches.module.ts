@@ -14,6 +14,7 @@ import { MatchCatalogService } from './services/match-catalog.service';
 import { DuelResolverService } from './services/duel-resolver.service';
 import { DuelResultsService } from './services/duel-results.service';
 import { MatchRoundsService } from './services/match-rounds.service';
+import { RematchService } from './services/rematch.service';
 import { MatchesService } from './matches.service';
 
 @Module({
@@ -34,6 +35,7 @@ import { MatchesService } from './matches.service';
     DuelResolverService,
     DuelResultsService,
     MatchRoundsService,
+    RematchService,
     MatchesService,
   ],
   exports: [MatchRoundsService, MatchesService],

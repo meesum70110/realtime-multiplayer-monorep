@@ -55,11 +55,75 @@ export class MatchRoundsService {
       resolvedAt: null,
       roundNumber: 1,
       roundStatus: RoundStatus.Open,
-      startedAt: new Date(),
+      // Armed later via startRound so the face-off countdown doesn't burn the timer.
+      startedAt: null,
       winnerUserId: null,
     });
 
     return this.roundsRepository.save(round);
+  }
+
+  /**
+   * Arms the round clock for both clients. Idempotent — the first caller sets
+   * `started_at`; later callers receive the same `round_ends_at`.
+   */
+  async startRound(
+    matchId: string,
+    roundId: string,
+    user: UserEntity,
+  ): Promise<{
+    round_id: string;
+    round_number: number;
+    round_ends_at: string;
+    round_time_limit_seconds: number;
+  }> {
+    const { match, round } = await this.getPlayableRoundForUser(
+      matchId,
+      roundId,
+      user.id,
+    );
+
+    if (round.roundStatus !== RoundStatus.Open) {
+      throw new ConflictException('Round is not open');
+    }
+
+    if (match.matchStatus === MatchStatus.Lobby) {
+      match.matchStatus = MatchStatus.InProgress;
+      match.startedAt = match.startedAt ?? new Date();
+      await this.matchesRepository.save(match);
+    }
+
+    if (round.startedAt === null) {
+      round.startedAt = new Date();
+      await this.roundsRepository.save(round);
+
+      const roundEndsAt = new Date(
+        round.startedAt.getTime() + match.roundTimeLimitSeconds * 1000,
+      ).toISOString();
+
+      this.realtimeGateway.emitToMatch(match.id, 'round_started', {
+        round_id: round.id,
+        round_number: round.roundNumber,
+        round_ends_at: roundEndsAt,
+        round_time_limit_seconds: match.roundTimeLimitSeconds,
+      });
+
+      return {
+        round_id: round.id,
+        round_number: round.roundNumber,
+        round_ends_at: roundEndsAt,
+        round_time_limit_seconds: match.roundTimeLimitSeconds,
+      };
+    }
+
+    return {
+      round_id: round.id,
+      round_number: round.roundNumber,
+      round_ends_at: new Date(
+        round.startedAt.getTime() + match.roundTimeLimitSeconds * 1000,
+      ).toISOString(),
+      round_time_limit_seconds: match.roundTimeLimitSeconds,
+    };
   }
 
   async ensureCurrentRound(match: MatchEntity): Promise<RoundEntity | null> {
@@ -270,10 +334,21 @@ export class MatchRoundsService {
     const winningScore = Math.max(match.player1Score, match.player2Score);
     const requiredWins = Math.floor(match.bestOf / 2) + 1;
 
+    const player1Submission = submissions.find(
+      (submission) => submission.userId === match.player1UserId,
+    );
+    const player2Submission = submissions.find(
+      (submission) => submission.userId === match.player2UserId,
+    );
+
     this.realtimeGateway.emitToMatch(match.id, 'battle_resolved', {
       battle_description: round.battleDescription,
+      player_1_input: player1Submission?.rawInput ?? '',
       player_1_score: match.player1Score,
+      player_1_user_id: match.player1UserId,
+      player_2_input: player2Submission?.rawInput ?? '',
       player_2_score: match.player2Score,
+      player_2_user_id: match.player2UserId,
       round_id: round.id,
       winner_item_id: winnerSubmission.itemId,
       winner_user_id: winnerSubmission.userId,
@@ -309,7 +384,8 @@ export class MatchRoundsService {
       resolvedAt: null,
       roundNumber: round.roundNumber + 1,
       roundStatus: RoundStatus.Open,
-      startedAt: new Date(),
+      // Clock is armed when clients call startRound after the verdict beat.
+      startedAt: null,
       winnerUserId: null,
     });
     const savedNextRound = await this.roundsRepository.save(nextRound);
@@ -317,6 +393,7 @@ export class MatchRoundsService {
     this.realtimeGateway.emitToMatch(match.id, 'next_round_started', {
       round_id: savedNextRound.id,
       round_number: savedNextRound.roundNumber,
+      round_ends_at: null,
       round_time_limit_seconds: match.roundTimeLimitSeconds,
     });
   }

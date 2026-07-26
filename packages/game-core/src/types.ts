@@ -147,6 +147,18 @@ export interface State {
   profileNotice: string
   playerName: string
   playerCountry: Country
+  /** Display name for the current opponent (human, ghost, or DOOM_BOT). */
+  oppName: string
+  oppHandle: string
+  /** How the active match is driven — offline bot, live server, or silent ghost bot. */
+  matchMode: 'offline' | 'online' | 'ghost'
+  /** True when the opponent disconnected / rage-quit mid-match. */
+  forfeitWin: boolean
+  rematchWaiting: boolean
+  rematchNotice: string
+  privateInviteCode: string
+  privateJoinDraft: string
+  privateError: string
   nameDraft: string
   clashes: Clash[]
   flashId: number | null
@@ -339,11 +351,15 @@ export interface ViewModel {
   onOpenSettings: () => void
   onOpenInvite: () => void
   settingsRows: SettingsRowView[]
-  inviteCodeStr: string
-  inviteCopied: boolean
-  inviteCopyLabel: string
-  onCopyInvite: () => void
-  friendsList: FriendListItem[]
+  privateInviteCode: string
+  privateJoinDraft: string
+  privateError: string
+  privateIsHosting: boolean
+  onPrivateJoinDraft: (e: ChangeEvent<HTMLInputElement>) => void
+  onCreatePrivateLobby: () => void
+  onJoinPrivateLobby: () => void
+  onCancelPrivateLobby: () => void
+  onCopyPrivateCode: () => void
   showTutorialConfirm: boolean
   stopProp: (e: MouseEvent) => void
   onHowToPlay: () => void
@@ -436,6 +452,8 @@ export interface ViewModel {
   onSaveProfile: () => void
   onOpenGameSettings: () => void
   playerName: string
+  /** Always-available @handle for the local player (menu chip, etc.). */
+  playerHandle: string
   countryOptions: CountryOption[]
 
   chatScrollRef: (el: HTMLDivElement | null) => void
@@ -454,6 +472,8 @@ export interface ViewModel {
   youCountryName: string
   oppFlag: string
   oppCountryName: string
+  oppName: string
+  oppHandle: string
   showMatchCount: boolean
   matchCount: number
   matchCountStyle: CSSProperties
@@ -579,6 +599,11 @@ export interface ViewModel {
   endTitle: string
   endTitleStyle: CSSProperties
   endSub: string
+  /** Scoreboard rival label on the end screen (`Bot` offline/ghost, real name online). */
+  endOppLabel: string
+  rematchWaiting: boolean
+  rematchNotice: string
+  rematchButtonLabel: string
   youScore: number
   oppScore: number
   confetti: Confetti[]

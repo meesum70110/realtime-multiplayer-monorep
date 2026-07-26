@@ -32,7 +32,7 @@ export function ExitConfirm() {
           Forfeit the battle?
         </h3>
         <p style={css('margin: 0; font-size: 14.5px; font-weight: 600; color: #6b7280; text-align: center; line-height: 1.5; max-width: 320px;')}>
-          DOOM_BOT instantly claims the win and this match vanishes. No takebacks.
+          {vm.oppName} instantly claims the win and this match vanishes. No takebacks.
         </p>
         <div style={css('display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 12px;')}>
           <Pressable

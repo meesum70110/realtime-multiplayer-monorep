@@ -9,6 +9,7 @@ import { MatchmakingService } from './matchmaking.service';
 import { FifoMatchmakingStrategy } from './services/fifo-matchmaking.strategy';
 import { MatchmakingModeService } from './services/matchmaking-mode.service';
 import { MatchmakingQueueService } from './services/matchmaking-queue.service';
+import { PrivateLobbyService } from './services/private-lobby.service';
 
 describe('MatchmakingService', () => {
   let service: MatchmakingService;
@@ -30,6 +31,7 @@ describe('MatchmakingService', () => {
       new FifoMatchmakingStrategy(),
       new MatchmakingModeService(),
       new MatchmakingQueueService(),
+      new PrivateLobbyService(),
       matchesService as unknown as MatchesService,
       realtimeGateway as unknown as RealtimeGateway,
     );

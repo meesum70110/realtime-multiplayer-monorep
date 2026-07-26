@@ -116,7 +116,7 @@ export function ChatWidget() {
                     </span>
                     <span style={css('display: inline-flex; align-items: center; gap: 5px; font-size: 9.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #9ca3af; line-height: 1;')}>
                       <span style={css('width: 6px; height: 6px; border-radius: 999px; background: #57c94f; animation: pulseDot 1.8s ease-out infinite;')}></span>
-                      DOOM_BOT online
+                      {vm.oppName} online
                     </span>
                   </div>
                 </div>
@@ -186,7 +186,7 @@ export function ChatWidget() {
               </span>
               <span style={css('display: flex; flex-direction: column; gap: 2px; min-width: 0;')}>
                 <span style={css('font-size: 9.5px; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; color: #ff8a6e; line-height: 1;')}>
-                  DOOM_BOT
+                  {vm.oppName}
                 </span>
                 <span style={css('font-size: 12.5px; font-weight: 700; color: #fffdfa; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;')}>
                   {vm.chatToast}

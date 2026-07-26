@@ -40,6 +40,22 @@ export class MatchesController {
     return this.matchesService.endMatchForTesting(matchId, user.id);
   }
 
+  @Post(':matchId/rematch')
+  requestRematch(
+    @Param('matchId', new ParseUUIDPipe()) matchId: string,
+    @CurrentUser() user: UserEntity,
+  ) {
+    return this.matchesService.requestRematch(matchId, user);
+  }
+
+  @Post(':matchId/rematch/decline')
+  declineRematch(
+    @Param('matchId', new ParseUUIDPipe()) matchId: string,
+    @CurrentUser() user: UserEntity,
+  ) {
+    return this.matchesService.declineRematch(matchId, user.id);
+  }
+
   @Post(':matchId/rounds/:roundId/validate')
   validateRoundInput(
     @Param('matchId', new ParseUUIDPipe()) matchId: string,
@@ -62,6 +78,15 @@ export class MatchesController {
     @CurrentUser() user: UserEntity,
   ) {
     return this.matchRoundsService.getSuggestions(matchId, roundId, user);
+  }
+
+  @Post(':matchId/rounds/:roundId/start')
+  startRound(
+    @Param('matchId', new ParseUUIDPipe()) matchId: string,
+    @Param('roundId', new ParseUUIDPipe()) roundId: string,
+    @CurrentUser() user: UserEntity,
+  ) {
+    return this.matchRoundsService.startRound(matchId, roundId, user);
   }
 
   @Post(':matchId/rounds/:roundId/submit')

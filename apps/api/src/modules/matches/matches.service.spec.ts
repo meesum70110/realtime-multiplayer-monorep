@@ -3,6 +3,7 @@ import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { MatchEntity } from './entities/match.entity';
 import { MatchStatus } from './entities/match-status.enum';
 import { MatchRoundsService } from './services/match-rounds.service';
+import { RematchService } from './services/rematch.service';
 import { MatchesService } from './matches.service';
 
 describe('MatchesService', () => {
@@ -17,7 +18,12 @@ describe('MatchesService', () => {
   let matchRoundsService: jest.Mocked<
     Pick<MatchRoundsService, 'createInitialRound' | 'ensureCurrentRound'>
   >;
-  let realtimeGateway: jest.Mocked<Pick<RealtimeGateway, 'emitToMatch'>>;
+  let realtimeGateway: jest.Mocked<
+    Pick<
+      RealtimeGateway,
+      'emitToMatch' | 'emitToUser' | 'onUserFullyDisconnected'
+    >
+  >;
 
   beforeEach(() => {
     matchesRepository = {
@@ -33,6 +39,8 @@ describe('MatchesService', () => {
     };
     realtimeGateway = {
       emitToMatch: jest.fn(),
+      emitToUser: jest.fn(),
+      onUserFullyDisconnected: jest.fn(),
     };
 
     service = new MatchesService(
@@ -42,16 +50,19 @@ describe('MatchesService', () => {
       } as never,
       matchmakingQueueService as unknown as MatchmakingQueueService,
       matchRoundsService as unknown as MatchRoundsService,
+      new RematchService(),
       realtimeGateway as unknown as RealtimeGateway,
     );
   });
 
-  it('ends a match and releases both players', async () => {
+  it('forfeits an active match and awards the remaining player', async () => {
     const match = {
       id: 'match-1',
       matchStatus: MatchStatus.Lobby,
       player1UserId: 'user-1',
       player2UserId: 'user-2',
+      player1Score: 0,
+      player2Score: 1,
     } as MatchEntity;
 
     matchesRepository.findOne.mockResolvedValue(match);
@@ -66,25 +77,26 @@ describe('MatchesService', () => {
     expect(matchesRepository.save).toHaveBeenCalledWith(
       expect.objectContaining({
         endedAt: expect.any(Date),
-        matchStatus: MatchStatus.Cancelled,
+        matchStatus: MatchStatus.Completed,
+        winnerUserId: 'user-2',
       }),
     );
     expect(matchmakingQueueService.releaseEntriesForMatch).toHaveBeenCalledWith(
       'match-1',
     );
-    expect(realtimeGateway.emitToMatch).toHaveBeenCalledWith(
-      'match-1',
-      'match_ended',
-      {
+    expect(realtimeGateway.emitToUser).toHaveBeenCalledWith(
+      'user-2',
+      'match_forfeited',
+      expect.objectContaining({
         match_id: 'match-1',
-        match_status: MatchStatus.Cancelled,
-        released_players: 2,
-      },
+        winner_user_id: 'user-2',
+        forfeited_user_id: 'user-1',
+      }),
     );
     expect(response).toEqual({
       match_id: 'match-1',
-      match_status: MatchStatus.Cancelled,
-      message: 'Match ended for testing',
+      match_status: MatchStatus.Completed,
+      message: 'Match forfeited',
       released_players: 2,
     });
   });

@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { COUNTRIES, DEFAULT_PROPS, FRIENDS, TOP_WORDS } from './constants'
+import { COUNTRIES, DEFAULT_PROPS, TOP_WORDS } from './constants'
 import { clashWrap, facetStyle, fragStyle, paneWrap, type ClashRole } from './geometry'
 import { emojiFor } from './throws'
 import type { GameEngine } from './GameEngine'
@@ -57,7 +57,7 @@ export function buildView(engine: GameEngine): ViewModel {
   const bothLocked = s.youLocked && s.oppLocked
   const role: ClashRole = isTie ? 'tie' : youWon ? 'win' : 'lose'
   const oppRole: ClashRole = isTie ? 'tie' : oppWon ? 'win' : 'lose'
-  const youWonMatch = s.youScore >= engine.winTarget
+  const youWonMatch = s.forfeitWin || s.youScore >= engine.winTarget
   const chrome = engine.cardChrome()
 
   const matchCountStyle: CSSProperties = {
@@ -222,46 +222,15 @@ export function buildView(engine: GameEngine): ViewModel {
       trackStyle: engine.switchTrack(r.on),
       knobStyle: engine.switchKnob(r.on),
     })),
-    inviteCodeStr: engine.inviteCode(),
-    inviteCopied: s.inviteCopied,
-    inviteCopyLabel: s.inviteCopied ? 'Copied!' : 'Copy link',
-    onCopyInvite: () => engine.copyInvite(),
-    friendsList: FRIENDS.map((fr) => ({
-      name: fr.name,
-      country: fr.country,
-      initial: fr.name[0],
-      invited: s.invitedFriends.includes(fr.name),
-      notInvited: !s.invitedFriends.includes(fr.name),
-      onInvite: (e) => {
-        if (e) e.stopPropagation()
-        engine.inviteFriend(fr.name)
-      },
-      onOpen: () => engine.openProfile('friend', fr),
-      avatarStyle: {
-        width: '40px',
-        height: '40px',
-        flexShrink: 0,
-        borderRadius: '12px',
-        background: fr.color,
-        border: '2px solid #22242a',
-        boxShadow: '2px 2px 0 rgba(34,36,42,0.14)',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: '#fff',
-        fontSize: '17px',
-        fontWeight: 900,
-      },
-      dotStyle: {
-        width: '9px',
-        height: '9px',
-        borderRadius: '999px',
-        flexShrink: 0,
-        background: fr.online ? '#2ecc71' : '#c9bda8',
-        boxShadow: fr.online ? '0 0 0 3px rgba(46,204,113,0.2)' : 'none',
-      },
-      statusLabel: fr.online ? 'Online' : 'Offline',
-    })),
+    privateInviteCode: s.privateInviteCode,
+    privateJoinDraft: s.privateJoinDraft,
+    privateError: s.privateError,
+    privateIsHosting: !!s.privateInviteCode,
+    onPrivateJoinDraft: (e) => engine.setPrivateJoinDraft(e.target.value),
+    onCreatePrivateLobby: () => engine.createPrivateLobby(),
+    onJoinPrivateLobby: () => engine.joinPrivateLobby(),
+    onCancelPrivateLobby: () => engine.cancelPrivateLobby(),
+    onCopyPrivateCode: () => engine.copyPrivateCode(),
     showTutorialConfirm: s.overlay === 'tutorialConfirm',
     stopProp: (e) => e.stopPropagation(),
     onHowToPlay: () => engine.openHowTo(),
@@ -303,7 +272,7 @@ export function buildView(engine: GameEngine): ViewModel {
     },
     showProfile: !!s.profileView,
     profileIsYou: s.profileView === 'you',
-    profileIsBot: s.profileView === 'opp',
+    profileIsBot: s.profileView === 'opp' && s.matchMode === 'offline',
     profileIsFriend: s.profileView === 'friend',
     profileNotYou: !!s.profileView && s.profileView !== 'you',
     profileName:
@@ -313,15 +282,15 @@ export function buildView(engine: GameEngine): ViewModel {
           ? s.profileFriend
             ? s.profileFriend.name
             : ''
-          : 'DOOM_BOT',
+          : s.oppName,
     profileHandle:
       s.profileView === 'you'
-        ? '@guest_123'
+        ? '@' + s.playerName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 16)
         : s.profileView === 'friend'
           ? s.profileFriend
             ? s.profileFriend.handle
             : ''
-          : '@doom_bot',
+          : s.oppHandle,
     profileFlag:
       s.profileView === 'friend'
         ? s.profileFriend
@@ -339,7 +308,13 @@ export function buildView(engine: GameEngine): ViewModel {
           ? s.oppCountry[1]
           : s.youCountry[1],
     profileTag:
-      s.profileView === 'you' ? 'Guest Player' : s.profileView === 'friend' ? 'Friend' : 'AI Opponent',
+      s.profileView === 'you'
+        ? 'Guest Player'
+        : s.profileView === 'friend'
+          ? 'Friend'
+          : s.matchMode === 'offline'
+            ? 'AI Opponent'
+            : 'Rival',
     profileTagStyle: {
       display: 'inline-flex',
       alignItems: 'center',
@@ -420,6 +395,13 @@ export function buildView(engine: GameEngine): ViewModel {
     onSaveProfile: () => engine.saveProfile(),
     onOpenGameSettings: () => engine.openOverlay('settings'),
     playerName: s.playerName,
+    playerHandle:
+      '@' +
+      s.playerName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_|_$/g, '')
+        .slice(0, 16),
     countryOptions: COUNTRIES.map((cc) => ({
       flag: cc[0],
       name: cc[1],
@@ -490,6 +472,8 @@ export function buildView(engine: GameEngine): ViewModel {
     youCountryName: s.youCountry[1],
     oppFlag: s.oppCountry[0],
     oppCountryName: s.oppCountry[1],
+    oppName: s.oppName,
+    oppHandle: s.oppHandle,
     showMatchCount: s.matchCount > 0,
     matchCount: s.matchCount,
     matchCountStyle,
@@ -772,7 +756,7 @@ export function buildView(engine: GameEngine): ViewModel {
       ? 'Draw — round replays'
       : youWon
         ? 'You take the round'
-        : 'DOOM_BOT takes the round',
+        : s.oppName + ' takes the round',
     verdictBadgeStyle: {
       marginTop: '6px',
       borderRadius: '999px',
@@ -823,7 +807,16 @@ export function buildView(engine: GameEngine): ViewModel {
       position: 'relative',
       zIndex: 2,
     },
-    endSub: youWonMatch ? 'The AI referee bows to your creativity.' : 'DOOM_BOT reigns. For now.',
+    endSub: s.forfeitWin
+      ? 'Opponent fled the arena'
+      : youWonMatch
+        ? 'The AI referee bows to your creativity.'
+        : s.oppName + ' reigns. For now.',
+    /** Online → real rival name; ghost/offline keep the classic BOT label. */
+    endOppLabel: s.matchMode === 'online' ? s.oppName || 'Rival' : 'Bot',
+    rematchWaiting: s.rematchWaiting,
+    rematchNotice: s.rematchNotice,
+    rematchButtonLabel: s.rematchWaiting ? 'Waiting for opponent…' : 'Rematch',
     youScore: s.youScore,
     oppScore: s.oppScore,
     confetti: s.confetti || [],

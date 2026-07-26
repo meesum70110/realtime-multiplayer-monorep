@@ -42,6 +42,9 @@ export function EndScreen() {
           {vm.endTitle}
         </h1>
         <p style={css('margin: 0; font-size: 18px; font-weight: 700; color: #6b7280; text-align: center;')}>{vm.endSub}</p>
+        {!!vm.rematchNotice && (
+          <p style={css('margin: 0; font-size: 14px; font-weight: 800; color: #b8860b; text-align: center;')}>{vm.rematchNotice}</p>
+        )}
       </div>
 
       <div style={css('display: flex; align-items: center; gap: 18px; animation: popIn 0.5s ease 0.35s both; flex-wrap: wrap; justify-content: center;')}>
@@ -52,7 +55,7 @@ export function EndScreen() {
         <span style={css('font-size: 30px; font-weight: 900; color: #d8cbb8;')}>–</span>
         <span style={css('font-size: 56px; font-weight: 900; color: #e63946; line-height: 1;')}>{vm.oppScore}</span>
         <span style={css('font-size: 12px; font-weight: 900; letter-spacing: 0.18em; color: #9ca3af; text-transform: uppercase;')}>
-          Bot
+          {vm.endOppLabel}
         </span>
       </div>
 
@@ -101,13 +104,13 @@ export function EndScreen() {
           onClick={vm.onRematch}
           baseStyle={css(
             isDesktop
-              ? "background: linear-gradient(90deg, #ff6b57, #ef4f3c, #e63946); color: #fff; border: none; border-radius: 999px; padding: 17px 52px; font-family: 'Inter', sans-serif; font-size: 19px; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; box-shadow: 0 8px 24px rgba(239,79,60,0.45); transition: transform 0.12s ease;"
-              : "background: linear-gradient(90deg, #ff6b57, #ef4f3c, #e63946); color: #fff; border: none; border-radius: 999px; padding: 12px 28px; min-height: 44px; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; box-shadow: 0 8px 24px rgba(239,79,60,0.45); transition: transform 0.12s ease; flex: 1 1 140px; max-width: 100%; box-sizing: border-box;",
+              ? `background: ${vm.rematchWaiting ? '#9ca3af' : 'linear-gradient(90deg, #ff6b57, #ef4f3c, #e63946)'}; color: #fff; border: none; border-radius: 999px; padding: 17px 52px; font-family: 'Inter', sans-serif; font-size: 19px; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; cursor: ${vm.rematchWaiting ? 'default' : 'pointer'}; box-shadow: 0 8px 24px rgba(239,79,60,0.45); transition: transform 0.12s ease;`
+              : `background: ${vm.rematchWaiting ? '#9ca3af' : 'linear-gradient(90deg, #ff6b57, #ef4f3c, #e63946)'}; color: #fff; border: none; border-radius: 999px; padding: 12px 28px; min-height: 44px; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; cursor: ${vm.rematchWaiting ? 'default' : 'pointer'}; box-shadow: 0 8px 24px rgba(239,79,60,0.45); transition: transform 0.12s ease; flex: 1 1 140px; max-width: 100%; box-sizing: border-box;`,
           )}
-          hoverStyle={css('transform: translateY(-3px);')}
-          activeStyle={css('transform: scale(0.97);')}
+          hoverStyle={vm.rematchWaiting ? undefined : css('transform: translateY(-3px);')}
+          activeStyle={vm.rematchWaiting ? undefined : css('transform: scale(0.97);')}
         >
-          Rematch
+          {vm.rematchButtonLabel}
         </Pressable>
         <Pressable
           as="button"

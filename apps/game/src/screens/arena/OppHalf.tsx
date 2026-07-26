@@ -145,7 +145,7 @@ export function OppHalf({ vm, stacked = false }: { vm: ViewModel; stacked?: bool
                   : 'display: inline-flex; align-items: center; gap: 8px; background: #fffdfa; border: 2px solid #22242a; border-radius: 999px; padding: 8px 20px; font-weight: 700; font-size: 14px; color: #6b7280; box-shadow: 2px 3px 0 rgba(34,36,42,0.1);',
               )}
             >
-              DOOM_BOT is typing
+              {vm.oppName} is typing
               <span style={css('display: inline-flex; gap: 3px;')}>
                 <span style={css('width: 5px; height: 5px; border-radius: 999px; background: #ff6b57; animation: dotBounce 1.1s ease-in-out infinite;')}></span>
                 <span style={css('width: 5px; height: 5px; border-radius: 999px; background: #ff6b57; animation: dotBounce 1.1s ease-in-out 0.15s infinite;')}></span>

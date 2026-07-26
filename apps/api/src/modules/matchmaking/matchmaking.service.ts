@@ -14,6 +14,7 @@ import { QueueStatus } from './enums/queue-status.enum';
 import { FifoMatchmakingStrategy } from './services/fifo-matchmaking.strategy';
 import { MatchmakingModeService } from './services/matchmaking-mode.service';
 import { MatchmakingQueueService } from './services/matchmaking-queue.service';
+import { PrivateLobbyService } from './services/private-lobby.service';
 import { MatchmakingQueueEntry } from './types/matchmaking-queue-entry.type';
 
 @Injectable()
@@ -22,6 +23,7 @@ export class MatchmakingService {
     private readonly fifoMatchmakingStrategy: FifoMatchmakingStrategy,
     private readonly matchmakingModeService: MatchmakingModeService,
     private readonly matchmakingQueueService: MatchmakingQueueService,
+    private readonly privateLobbyService: PrivateLobbyService,
     private readonly matchesService: MatchesService,
     private readonly realtimeGateway: RealtimeGateway,
   ) {}
@@ -95,6 +97,77 @@ export class MatchmakingService {
     });
 
     return { message: 'Queue search cancelled' };
+  }
+
+  createPrivateLobby(user: UserEntity): Record<string, unknown> {
+    // Leave any public queue before hosting a private room.
+    const active = this.matchmakingQueueService.getActiveEntryForUser(user.id);
+    if (active !== null && active.status === QueueStatus.Waiting) {
+      this.matchmakingQueueService.cancel(active.id, user.id);
+    }
+
+    const lobby = this.privateLobbyService.create(user.id);
+
+    this.realtimeGateway.emitToUser(user.id, 'private_lobby_created', {
+      invite_code: lobby.code,
+    });
+
+    return {
+      invite_code: lobby.code,
+      status: 'waiting',
+      message: 'Private room created — share the code with a friend',
+    };
+  }
+
+  async joinPrivateLobby(
+    user: UserEntity,
+    inviteCode: string,
+  ): Promise<Record<string, unknown>> {
+    const lobby = this.privateLobbyService.takeForJoin(inviteCode, user.id);
+    const activeMode = this.matchmakingModeService.getActiveMode();
+
+    const match = await this.matchesService.createLobbyMatch({
+      modeSnapshot: activeMode,
+      player1UserId: lobby.hostUserId,
+      player2UserId: user.id,
+    });
+
+    await this.realtimeGateway.addUsersToMatchRoom(
+      [lobby.hostUserId, user.id],
+      match.id,
+    );
+
+    const syntheticQueueId = match.id;
+    this.realtimeGateway.emitToUser(lobby.hostUserId, 'match_found', {
+      match_id: match.id,
+      match_status: MatchStatus.Lobby,
+      mode_type: match.modeType,
+      player_side: 'player_1',
+      queue_entry_id: syntheticQueueId,
+    });
+    this.realtimeGateway.emitToUser(user.id, 'match_found', {
+      match_id: match.id,
+      match_status: MatchStatus.Lobby,
+      mode_type: match.modeType,
+      player_side: 'player_2',
+      queue_entry_id: syntheticQueueId,
+    });
+
+    return {
+      status: 'matched',
+      match_id: match.id,
+      invite_code: lobby.code,
+      message: 'Joined private room',
+    };
+  }
+
+  cancelPrivateLobby(userId: string): { message: string } {
+    const result = this.privateLobbyService.cancelForUser(userId);
+    return {
+      message: result.cancelled
+        ? 'Private room cancelled'
+        : 'No private room to cancel',
+    };
   }
 
   private async tryMatch(queueEntry: MatchmakingQueueEntry): Promise<void> {

@@ -237,7 +237,7 @@ export function MatchmakingScreen() {
                     : 'font-weight: 900; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: #22242a; text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;',
                 )}
               >
-                DOOM_BOT
+                {vm.oppName}
               </span>
               <div
                 style={css(

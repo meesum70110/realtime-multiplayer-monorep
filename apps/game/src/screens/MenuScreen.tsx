@@ -132,7 +132,7 @@ export function MenuScreen() {
                   : 'font-weight: 900; font-size: clamp(11px, 3vw, 14px); color: #22242a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;',
               )}
             >
-              Alex Rivera
+              {vm.playerName}
             </span>
             <span
               style={css(
@@ -141,7 +141,7 @@ export function MenuScreen() {
                   : 'font-size: clamp(9px, 2.4vw, 12px); font-weight: 700; color: #9ca3af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;',
               )}
             >
-              @alexr
+              {vm.playerHandle}
             </span>
           </div>
           {isWideDesktop && (

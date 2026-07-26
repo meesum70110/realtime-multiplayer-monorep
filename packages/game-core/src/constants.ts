@@ -76,3 +76,22 @@ export const FRIENDS: readonly Friend[] = [
   { name: 'toastmaster', handle: '@toast', flag: '🇰🇷', country: 'Korea', online: true, color: '#eeb52f', matches: '2,051', wr: '71%', fav: 'Butter' },
   { name: 'GG_Gary', handle: '@gary', flag: '🇨🇦', country: 'Canada', online: false, color: '#00c9b8', matches: '659', wr: '55%', fav: 'Moose' },
 ]
+
+/** Human-looking names for ghost matchmaking fallback (never reveal these are bots). */
+export const GHOST_OPPONENTS: readonly { name: string; handle: string }[] = [
+  { name: 'NovaBlade', handle: '@nova' },
+  { name: 'quiet_storm', handle: '@qstorm' },
+  { name: 'Kairos', handle: '@kairos' },
+  { name: 'MangoMissile', handle: '@mango' },
+  { name: 'EchoPark', handle: '@echo' },
+  { name: 'Rivet', handle: '@rivet' },
+  { name: 'SaltMine', handle: '@salt' },
+  { name: 'JadeViper', handle: '@jade' },
+  { name: 'LowPoly', handle: '@lowpoly' },
+  { name: 'CrimsonInk', handle: '@crimson' },
+  { name: 'ByteBaron', handle: '@byte' },
+  { name: 'Wisp', handle: '@wisp' },
+]
+
+/** How long to wait in the real queue before silently falling back to a ghost bot. */
+export const GHOST_QUEUE_MS = 8_000

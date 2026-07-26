@@ -197,7 +197,7 @@ export function Scoreboard() {
                     : 'font-weight: 900; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 72px;',
                 )}
               >
-                DOOM_BOT
+                {vm.oppName}
               </span>
             </div>
             <div style={css('display: flex; align-items: flex-start; gap: 12px; flex-direction: row-reverse;')}>

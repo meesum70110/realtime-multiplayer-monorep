@@ -76,7 +76,7 @@ export function validateEnv(config: EnvRecord): EnvRecord {
     NODE_ENV: readString(config, 'NODE_ENV', 'development'),
     PORT: readNumber(config, 'PORT', 3001),
     API_PREFIX: readString(config, 'API_PREFIX', 'api'),
-    CORS_ORIGIN: readString(config, 'CORS_ORIGIN', 'http://localhost:3000'),
+    CORS_ORIGIN: readString(config, 'CORS_ORIGIN', 'http://localhost:5173'),
     DATABASE_HOST: readString(config, 'DATABASE_HOST', 'localhost'),
     DATABASE_PORT: readNumber(config, 'DATABASE_PORT', 5432),
     DATABASE_USERNAME: readString(config, 'DATABASE_USERNAME', 'postgres'),

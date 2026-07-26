@@ -29,6 +29,8 @@ export type MatchLobbyResponse = {
   };
   player_2_score: number;
   player_side: 'player_1' | 'player_2';
+  /** Absolute ISO timestamp when the current round timer should hit zero. Null if no open round. */
+  round_ends_at: string | null;
   round_time_limit_seconds: number;
   rule_type: MatchRuleType;
   theme_name: string | null;

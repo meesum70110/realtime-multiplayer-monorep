@@ -182,7 +182,7 @@ export function ClashStage() {
               ></div>
             </div>
             <span style={vm.cardSpark}>✦</span>
-            <span style={vm.cardTab}>DOOM_BOT</span>
+            <span style={vm.cardTab}>{vm.oppName}</span>
             <span style={vm.cardMedal}>
               <span style={css('font-size: 84px; line-height: 1;')}>{vm.oppEmoji}</span>
             </span>

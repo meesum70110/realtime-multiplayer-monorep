@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import {
   ConnectedSocket,
   OnGatewayConnection,
+  OnGatewayDisconnect,
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
@@ -17,13 +18,29 @@ import { SessionAuthService } from '../auth/services/session-auth.service';
   },
   namespace: 'realtime',
 })
-export class RealtimeGateway implements OnGatewayConnection {
+export class RealtimeGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   private server?: Server;
 
   private readonly logger = new Logger(RealtimeGateway.name);
 
+  /** userId → active socket ids (multi-tab safe). */
+  private readonly onlineUsers = new Map<string, Set<string>>();
+
+  /** Fired when a user has zero remaining sockets (true disconnect). */
+  private readonly fullyDisconnectedHandlers: Array<
+    (userId: string) => void | Promise<void>
+  > = [];
+
   constructor(private readonly sessionAuthService: SessionAuthService) {}
+
+  onUserFullyDisconnected(
+    handler: (userId: string) => void | Promise<void>,
+  ): void {
+    this.fullyDisconnectedHandlers.push(handler);
+  }
 
   async handleConnection(
     @ConnectedSocket() client: AuthenticatedSocket,
@@ -46,13 +63,42 @@ export class RealtimeGateway implements OnGatewayConnection {
       client.data.user = authenticatedSession.user;
 
       await client.join(this.getUserRoom(authenticatedSession.user.id));
+      this.trackConnect(authenticatedSession.user.id, client.id);
+
+      const playersOnline = this.getOnlineUserCount();
       client.emit('connection_ready', {
         user_id: authenticatedSession.user.id,
+        players_online: playersOnline,
       });
+      this.broadcastPresence();
     } catch {
       this.logger.warn('Rejected realtime connection');
       client.disconnect(true);
     }
+  }
+
+  handleDisconnect(@ConnectedSocket() client: AuthenticatedSocket): void {
+    const userId = client.data.auth?.userId;
+    if (userId === undefined) {
+      return;
+    }
+
+    const fullyGone = this.trackDisconnect(userId, client.id);
+    this.broadcastPresence();
+
+    if (fullyGone) {
+      for (const handler of this.fullyDisconnectedHandlers) {
+        void Promise.resolve(handler(userId)).catch((error: unknown) => {
+          this.logger.warn(
+            `Disconnect handler failed for ${userId}: ${String(error)}`,
+          );
+        });
+      }
+    }
+  }
+
+  getOnlineUserCount(): number {
+    return this.onlineUsers.size;
   }
 
   emitToUser(userId: string, event: string, payload: unknown): void {
@@ -87,6 +133,34 @@ export class RealtimeGateway implements OnGatewayConnection {
 
   getMatchRoom(matchId: string): string {
     return `match:${matchId}`;
+  }
+
+  private trackConnect(userId: string, socketId: string): void {
+    const sockets = this.onlineUsers.get(userId) ?? new Set<string>();
+    sockets.add(socketId);
+    this.onlineUsers.set(userId, sockets);
+  }
+
+  /** @returns true when the user has no remaining sockets. */
+  private trackDisconnect(userId: string, socketId: string): boolean {
+    const sockets = this.onlineUsers.get(userId);
+    if (sockets === undefined) {
+      return true;
+    }
+
+    sockets.delete(socketId);
+    if (sockets.size === 0) {
+      this.onlineUsers.delete(userId);
+      return true;
+    }
+
+    return false;
+  }
+
+  private broadcastPresence(): void {
+    this.server?.emit('presence_updated', {
+      players_online: this.getOnlineUserCount(),
+    });
   }
 
   private extractAccessToken(client: AuthenticatedSocket): string | null {

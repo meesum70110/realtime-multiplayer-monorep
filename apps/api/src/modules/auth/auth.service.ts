@@ -1,3 +1,5 @@
+import { randomBytes, randomUUID } from 'node:crypto';
+
 import {
   ConflictException,
   Injectable,
@@ -6,6 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { QueryFailedError, Repository } from 'typeorm';
 
+import { GuestDto } from './dto/guest.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { SessionEntity } from './entities/session.entity';
@@ -73,6 +76,47 @@ export class AuthService {
     }
 
     return this.issueSession(user);
+  }
+
+  /**
+   * Creates an ephemeral guest account + session so the game client can
+   * authenticate without a login UI. Guests get a unique Guest_XXXX name
+   * (or an optional requested display_name) and a synthetic email.
+   */
+  async guest(request: GuestDto = {}): Promise<AuthResponse> {
+    return this.createGuestAccount(request, 0);
+  }
+
+  private async createGuestAccount(
+    request: GuestDto,
+    attempt: number,
+  ): Promise<AuthResponse> {
+    const guestId = randomUUID();
+    const displayName = this.normalizeDisplayName(
+      request.display_name?.trim() && attempt === 0
+        ? request.display_name
+        : `Guest_${guestId.slice(0, 4).toUpperCase()}`,
+    );
+    const email = this.normalizeEmail(`guest+${guestId}@rpsa.local`);
+    const password = randomBytes(24).toString('base64url');
+
+    const user = this.usersRepository.create({
+      email,
+      displayName,
+      displayNameNormalized: this.normalizeDisplayNameForLookup(displayName),
+      passwordHash: await this.passwordHasherService.hashPassword(password),
+    });
+
+    try {
+      const savedUser = await this.usersRepository.save(user);
+      return this.issueSession(savedUser);
+    } catch (error) {
+      if (this.isUniqueConstraintViolation(error) && attempt < 2) {
+        return this.createGuestAccount({}, attempt + 1);
+      }
+
+      throw error;
+    }
   }
 
   private async issueSession(user: UserEntity): Promise<AuthResponse> {

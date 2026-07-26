@@ -7,12 +7,12 @@ import { MatchmakingModeSnapshot } from '../types/matchmaking-mode-snapshot.type
 @Injectable()
 export class MatchmakingModeService {
   private readonly activeMode: MatchmakingModeSnapshot = {
-    bestOf: 5,
+    bestOf: 3,
     levelMax: null,
     levelMin: null,
     levelModeType: null,
     modeType: MatchModeType.OneVsOne,
-    roundTimeLimitSeconds: 30,
+    roundTimeLimitSeconds: 15,
     ruleType: MatchRuleType.Open,
     themeName: null,
     totalPointsPerPlayer: null,

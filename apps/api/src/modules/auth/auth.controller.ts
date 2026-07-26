@@ -9,6 +9,7 @@ import {
 import { NoFilesInterceptor } from '@nestjs/platform-express';
 
 import { Public } from '../../common/auth/public.decorator';
+import { GuestDto } from './dto/guest.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { AuthService } from './auth.service';
@@ -29,5 +30,12 @@ export class AuthController {
   @Public()
   login(@Body() request: LoginDto) {
     return this.authService.login(request);
+  }
+
+  @Post('guest')
+  @HttpCode(HttpStatus.OK)
+  @Public()
+  guest(@Body() request?: GuestDto) {
+    return this.authService.guest(request ?? {});
   }
 }

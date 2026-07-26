@@ -1,6 +1,23 @@
 import type { CSSProperties } from 'react'
 import { AudioEngine } from './audio'
-import { BOT_THROWS, COUNTRIES, DEFAULT_PROPS, IDEAS } from './constants'
+import {
+  BOT_THROWS,
+  COUNTRIES,
+  DEFAULT_PROPS,
+  GHOST_OPPONENTS,
+  GHOST_QUEUE_MS,
+  IDEAS,
+} from './constants'
+import type {
+  BattleResolvedInfo,
+  MatchCompletedInfo,
+  MatchForfeitedInfo,
+  MatchFoundInfo,
+  MatchMode,
+  MatchTransport,
+  NextRoundInfo,
+  PlayerSide,
+} from './transport'
 import {
   makeBarrierPane,
   makeBarrierShards,
@@ -60,6 +77,15 @@ const INITIAL_STATE: State = {
   profileNotice: '',
   playerName: 'GUEST_123',
   playerCountry: ['🇺🇸', 'USA'] as const,
+  oppName: 'DOOM_BOT',
+  oppHandle: '@doom_bot',
+  matchMode: 'offline',
+  forfeitWin: false,
+  rematchWaiting: false,
+  rematchNotice: '',
+  privateInviteCode: '',
+  privateJoinDraft: '',
+  privateError: '',
   nameDraft: '',
   clashes: [],
   flashId: null,
@@ -126,6 +152,28 @@ export class GameEngine {
   private chatScroll: HTMLDivElement | null = null
   private lastClashAnim: ClashAnim | null = null
   private lastDieAnim: DieAnim | null = null
+
+  private transport: MatchTransport | null = null
+  private queueEntryId: string | null = null
+  private activeMatchId: string | null = null
+  private activeRoundId: string | null = null
+  private roundEndsAt: string | null = null
+  private ghostTimer: number | null = null
+  private unsubMatchFound: (() => void) | null = null
+  private onlineUnsubs: Array<() => void> = []
+  /** Bumps on every findMatch/cancel so in-flight async queue calls are ignored. */
+  private searchEpoch = 0
+  /** Latches so socket + REST instant-match can't double-start the face-off. */
+  private matchAccepted = false
+  private selfUserId: string | null = null
+  private playerSide: PlayerSide | null = null
+  private serverRoundLimit: number = DEFAULT_PROPS.timerSeconds
+  private useWallClock = false
+  private pendingNextRound: NextRoundInfo | null = null
+  private matchCompletedInfo: MatchCompletedInfo | null = null
+  private scoresFromServer = false
+  private onlineClockArmed = false
+  private submittingOnline = false
 
   private readonly morphPool: MorphSym[] = [
     'fire',
@@ -340,6 +388,148 @@ export class GameEngine {
       cancelAnimationFrame(this.tickRAF)
       this.tickRAF = null
     }
+    this.clearGhostTimer()
+  }
+
+  private clearGhostTimer(): void {
+    if (this.ghostTimer !== null) {
+      clearTimeout(this.ghostTimer)
+      this.ghostTimer = null
+    }
+  }
+
+  private clearMatchFoundSub(): void {
+    if (this.unsubMatchFound) {
+      this.unsubMatchFound()
+      this.unsubMatchFound = null
+    }
+  }
+
+  /** Injected by the app shell after guest auth + socket connect. Null = pure offline bot. */
+  setTransport(transport: MatchTransport | null): void {
+    this.clearMatchFoundSub()
+    this.clearOnlineSubs()
+    this.transport = transport
+    if (transport) this.bindOnlineTransport(transport)
+  }
+
+  setPlayerIdentity(displayName: string, userId?: string): void {
+    const name = displayName.trim() || this.state.playerName
+    if (userId) this.selfUserId = userId
+    this.setState({ playerName: name })
+  }
+
+  private clearOnlineSubs(): void {
+    for (const unsub of this.onlineUnsubs) unsub()
+    this.onlineUnsubs = []
+  }
+
+  private bindOnlineTransport(transport: MatchTransport): void {
+    this.onlineUnsubs.push(
+      transport.onMatchFound((info) => {
+        void this.handleOnlineMatchFound(info, this.searchEpoch)
+      }),
+      transport.onPresenceUpdated((n) => {
+        if (n > 0) this.setState({ playersOnline: n })
+      }),
+      transport.onRoundStarted((info) => {
+        if (!this.isOnlineMatch()) return
+        if (this.activeRoundId && info.roundId !== this.activeRoundId) return
+        this.applyRoundClock(info.roundEndsAt, info.roundTimeLimitSeconds)
+        if (this.state.phase === 'typing' && !this.tickRAF) {
+          this.startTypingEngine()
+        }
+      }),
+      transport.onOpponentSubmitted((info) => {
+        if (!this.isOnlineMatch()) return
+        if (info.roundId !== this.activeRoundId) return
+        if (this.state.phase !== 'typing' || this.state.oppLocked) return
+        this.audio.sfx('oppLock')
+        this.audio.sfx('crack')
+        this.setState((s) => ({
+          oppLocked: true,
+          crackLevel: Math.min(0.92, s.crackLevel + 0.2),
+        }))
+      }),
+      transport.onBattleResolved((info) => {
+        this.handleBattleResolved(info)
+      }),
+      transport.onNextRoundStarted((info) => {
+        if (!this.isOnlineMatch()) return
+        this.pendingNextRound = info
+      }),
+      transport.onMatchCompleted((info) => {
+        if (!this.isOnlineMatch()) return
+        this.matchCompletedInfo = info
+      }),
+      transport.onMatchForfeited((info) => {
+        this.handleMatchForfeited(info)
+      }),
+      transport.onRematchRequested(() => {
+        if (this.state.phase !== 'end') return
+        this.setState({
+          rematchNotice: this.state.oppName + ' wants a rematch!',
+        })
+      }),
+      transport.onRematchDeclined(() => {
+        if (this.state.phase !== 'end') return
+        this.setState({
+          rematchWaiting: false,
+          rematchNotice: 'Opponent declined the rematch',
+        })
+        this.audio.sfx('error')
+        this.t(() => this.toMenu(), 1400)
+      }),
+    )
+  }
+
+  private handleMatchForfeited(info: MatchForfeitedInfo): void {
+    if (!this.selfUserId || info.winnerUserId !== this.selfUserId) return
+    if (this.state.phase === 'end' || this.state.phase === 'menu') return
+
+    this.matchCompletedInfo = {
+      matchId: info.matchId,
+      winnerUserId: info.winnerUserId,
+      finalScore: info.finalScore,
+    }
+    this.activeMatchId = info.matchId
+    const youAreP1 = this.playerSide === 'player_1'
+    this.setState({
+      forfeitWin: true,
+      rematchWaiting: false,
+      rematchNotice: '',
+      youScore: youAreP1 ? info.finalScore.player1 : info.finalScore.player2,
+      oppScore: youAreP1 ? info.finalScore.player2 : info.finalScore.player1,
+      showExitConfirm: false,
+    })
+    this.endMatch()
+  }
+
+  private isOnlineMatch(): boolean {
+    return this.state.matchMode === 'online' && !!this.transport && !!this.activeMatchId
+  }
+
+  private applyRoundClock(endsAt: string, limitSeconds: number): void {
+    this.roundEndsAt = endsAt
+    this.serverRoundLimit = Math.max(6, Math.min(60, limitSeconds))
+    this.useWallClock = true
+    this.onlineClockArmed = true
+  }
+
+  getMatchMode(): MatchMode {
+    return this.state.matchMode
+  }
+
+  getActiveMatchId(): string | null {
+    return this.activeMatchId
+  }
+
+  getActiveRoundId(): string | null {
+    return this.activeRoundId
+  }
+
+  getRoundEndsAt(): string | null {
+    return this.roundEndsAt
   }
 
   // ---- menu morph logo ----
@@ -481,13 +671,19 @@ export class GameEngine {
   profileAction(kind: 'friend' | 'report' | 'block' | 'share'): void {
     this.audio.sfx('click')
     const who = this.state.profileView
-    const name = who === 'you' ? 'GUEST_123' : 'DOOM_BOT'
+    const name = who === 'you' ? this.state.playerName : this.state.oppName
     let msg = ''
     if (kind === 'friend')
-      msg = who === 'opp' ? 'DOOM_BOT declined your friend request.' : 'That’s you! Share your profile instead.'
+      msg =
+        who === 'opp'
+          ? this.state.oppName + ' declined your friend request.'
+          : 'That’s you! Share your profile instead.'
     else if (kind === 'report') msg = 'Report submitted — our refs will review ' + name + '.'
     else if (kind === 'block')
-      msg = who === 'opp' ? 'You won’t be matched with DOOM_BOT again.' : 'You can’t block yourself!'
+      msg =
+        who === 'opp'
+          ? 'You won’t be matched with ' + this.state.oppName + ' again.'
+          : 'You can’t block yourself!'
     else if (kind === 'share') msg = 'Profile link copied to clipboard.'
     this.setState({ profileNotice: msg })
   }
@@ -1324,6 +1520,20 @@ export class GameEngine {
   // ---- flow ----
   findMatch(): void {
     this.clearAll()
+    this.clearMatchFoundSub()
+    this.searchEpoch += 1
+    this.matchAccepted = false
+    this.queueEntryId = null
+    this.activeMatchId = null
+    this.activeRoundId = null
+    this.roundEndsAt = null
+    this.useWallClock = false
+    this.onlineClockArmed = false
+    this.pendingNextRound = null
+    this.matchCompletedInfo = null
+    this.scoresFromServer = false
+    this.playerSide = null
+    this.submittingOnline = false
     this.audio.sfx('click')
     const c = [...COUNTRIES].sort(() => Math.random() - 0.5)
     this.setState({
@@ -1332,6 +1542,9 @@ export class GameEngine {
       matchCount: 0,
       youCountry: this.state.playerCountry,
       oppCountry: c[1],
+      oppName: 'DOOM_BOT',
+      oppHandle: '@doom_bot',
+      matchMode: this.transport ? 'online' : 'offline',
       round: 1,
       youScore: 0,
       oppScore: 0,
@@ -1344,7 +1557,152 @@ export class GameEngine {
       chatUnread: 0,
       chatToast: null,
       profileView: null,
+      forfeitWin: false,
+      rematchWaiting: false,
+      rematchNotice: '',
+      privateInviteCode: '',
+      privateError: '',
     })
+
+    if (!this.transport) {
+      this.beginLocalFoundCountdown()
+      return
+    }
+
+    void this.findMatchOnline(this.searchEpoch)
+  }
+
+  private async findMatchOnline(epoch: number): Promise<void> {
+    const transport = this.transport
+    if (!transport) {
+      this.beginLocalFoundCountdown()
+      return
+    }
+
+    try {
+      const joined = await transport.joinQueue()
+      if (epoch !== this.searchEpoch || this.state.phase !== 'searching') return
+      this.queueEntryId = joined.queueEntryId
+      this.clearGhostTimer()
+      this.ghostTimer = window.setTimeout(() => {
+        void this.fallbackToGhost(epoch)
+      }, GHOST_QUEUE_MS)
+    } catch {
+      if (epoch !== this.searchEpoch || this.state.phase !== 'searching') return
+      // Queue failed (API down) — still give a seamless match via ghost.
+      await this.fallbackToGhost(epoch)
+    }
+  }
+
+  private async handleOnlineMatchFound(info: MatchFoundInfo, epoch: number): Promise<void> {
+    const fromPrivateOrRematch =
+      this.state.phase === 'end' ||
+      !!this.state.privateInviteCode ||
+      this.state.overlay === 'invite'
+    if (epoch !== this.searchEpoch && !fromPrivateOrRematch) return
+    if (this.matchAccepted && this.state.phase === 'searching') return
+    if (this.state.matchMode === 'ghost' && this.state.phase === 'searching') return
+    if (
+      this.state.phase !== 'searching' &&
+      this.state.phase !== 'end' &&
+      this.state.overlay !== 'invite' &&
+      !this.state.privateInviteCode
+    ) {
+      return
+    }
+
+    this.matchAccepted = true
+    this.clearGhostTimer()
+    this.clearMatchFoundSub()
+    this.queueEntryId = info.queueEntryId
+    this.activeMatchId = info.matchId
+    this.activeRoundId = info.currentRoundId
+    this.roundEndsAt = null
+    this.useWallClock = false
+    this.onlineClockArmed = false
+    this.pendingNextRound = null
+    this.matchCompletedInfo = null
+    this.scoresFromServer = false
+    this.playerSide = info.playerSide
+    this.serverRoundLimit = info.roundTimeLimitSeconds || DEFAULT_PROPS.timerSeconds
+
+    const handle =
+      '@' +
+      info.opponent.displayName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_|_$/g, '')
+        .slice(0, 16)
+
+    const c = [...COUNTRIES].sort(() => Math.random() - 0.5)
+    this.clearAll()
+    this.setState({
+      phase: 'searching',
+      searchStep: 'searching',
+      matchCount: 0,
+      matchMode: 'online',
+      oppName: info.opponent.displayName,
+      oppHandle: handle || '@rival',
+      oppCountry: c[1] ?? this.state.oppCountry,
+      youCountry: this.state.playerCountry,
+      round: 1,
+      youScore: 0,
+      oppScore: 0,
+      history: [],
+      chantDone: false,
+      outcome: '',
+      confetti: null,
+      forfeitWin: false,
+      rematchWaiting: false,
+      rematchNotice: '',
+      privateInviteCode: '',
+      privateError: '',
+      overlay: null,
+      chatMsgs: [],
+      chatOpen: false,
+      chatUnread: 0,
+      chatToast: null,
+      profileView: null,
+    })
+    this.beginLocalFoundCountdown()
+  }
+
+  private async fallbackToGhost(epoch: number): Promise<void> {
+    if (epoch !== this.searchEpoch) return
+    if (this.state.phase !== 'searching' || this.matchAccepted) return
+
+    this.clearGhostTimer()
+    this.clearMatchFoundSub()
+
+    const queueId = this.queueEntryId
+    this.queueEntryId = null
+    if (queueId && this.transport) {
+      try {
+        await this.transport.cancelQueue(queueId)
+      } catch {
+        /* already cancelled / matched — ignore */
+      }
+    }
+
+    // A real match_found may have won the race while we awaited cancel.
+    if (epoch !== this.searchEpoch || this.matchAccepted) return
+    if (this.state.phase !== 'searching') return
+
+    this.matchAccepted = true
+    const ghost = rand(GHOST_OPPONENTS)
+    this.activeMatchId = null
+    this.activeRoundId = null
+    this.roundEndsAt = null
+    this.setState({
+      matchMode: 'ghost',
+      oppName: ghost.name,
+      oppHandle: ghost.handle,
+    })
+    this.beginLocalFoundCountdown()
+  }
+
+  /** Shared face-off countdown used by offline, online, and ghost matches. */
+  private beginLocalFoundCountdown(): void {
     const found = 1800 + Math.random() * 1200
     this.t(() => {
       this.setState({ searchStep: 'found' })
@@ -1373,17 +1731,70 @@ export class GameEngine {
     this.t(() => {
       if (this.state.phase === 'searching') this.startRound()
     }, found + 5200)
-    this.t(() => this.botChat(rand(this.BOT_GREETINGS)), found + 6200)
+    if (!this.isOnlineMatch()) {
+      this.t(() => this.botChat(rand(this.BOT_GREETINGS)), found + 6200)
+    }
   }
 
   cancelSearch(): void {
+    this.searchEpoch += 1
+    const queueId = this.queueEntryId
+    this.queueEntryId = null
+    this.clearMatchFoundSub()
+    this.clearGhostTimer()
+    if (queueId && this.transport) {
+      void this.transport.cancelQueue(queueId).catch(() => undefined)
+    }
+    if (this.state.privateInviteCode && this.transport) {
+      void this.transport.cancelPrivateLobby().catch(() => undefined)
+    }
     this.clearAll()
-    this.setState({ phase: 'menu', tutorMode: false, coachRect: null })
+    this.setState({
+      phase: 'menu',
+      tutorMode: false,
+      coachRect: null,
+      matchMode: this.transport ? 'online' : 'offline',
+      oppName: 'DOOM_BOT',
+      oppHandle: '@doom_bot',
+      privateInviteCode: '',
+      privateError: '',
+    })
   }
 
   toMenu(): void {
+    this.searchEpoch += 1
+    this.clearMatchFoundSub()
+    this.clearGhostTimer()
+    const endingMatchId = this.activeMatchId
+    const wasActiveOnline =
+      this.state.matchMode === 'online' &&
+      !!endingMatchId &&
+      this.state.phase !== 'end' &&
+      this.state.phase !== 'menu'
+    const wasEndedOnline =
+      this.state.matchMode === 'online' && !!endingMatchId && this.state.phase === 'end'
+    this.queueEntryId = null
+    this.activeMatchId = null
+    this.activeRoundId = null
+    this.roundEndsAt = null
+    this.useWallClock = false
+    this.onlineClockArmed = false
+    this.pendingNextRound = null
+    this.matchCompletedInfo = null
+    this.scoresFromServer = false
+    this.playerSide = null
     this.clearAll()
     this.audio.sfx('click')
+    if (this.transport) {
+      if (wasActiveOnline && endingMatchId) {
+        void this.transport.endMatch(endingMatchId).catch(() => undefined)
+      } else if (wasEndedOnline && endingMatchId) {
+        void this.transport.declineRematch(endingMatchId).catch(() => undefined)
+      }
+      if (this.state.privateInviteCode) {
+        void this.transport.cancelPrivateLobby().catch(() => undefined)
+      }
+    }
     this.setState({
       phase: 'menu',
       showExitConfirm: false,
@@ -1397,12 +1808,36 @@ export class GameEngine {
       chantDone: false,
       tutorMode: false,
       coachRect: null,
-      playersOnline: 940 + Math.floor(Math.random() * 300),
+      forfeitWin: false,
+      rematchWaiting: false,
+      rematchNotice: '',
+      privateInviteCode: '',
+      privateError: '',
+      overlay: null,
+      // Keep last known live presence; only mock when offline.
+      playersOnline: this.transport
+        ? this.state.playersOnline
+        : 940 + Math.floor(Math.random() * 300),
+      matchMode: this.transport ? 'online' : 'offline',
+      oppName: 'DOOM_BOT',
+      oppHandle: '@doom_bot',
     })
   }
 
   startRound(): void {
     this.clearAll()
+    this.onlineClockArmed = false
+    this.useWallClock = false
+    this.roundEndsAt = null
+    this.scoresFromServer = false
+    this.submittingOnline = false
+    if (this.pendingNextRound && this.isOnlineMatch()) {
+      this.activeRoundId = this.pendingNextRound.roundId
+      this.serverRoundLimit =
+        this.pendingNextRound.roundTimeLimitSeconds || this.serverRoundLimit
+      this.setState({ round: this.pendingNextRound.roundNumber })
+      this.pendingNextRound = null
+    }
     const used = this.state.history.map((h) => h.you.toLowerCase())
     const ideas = IDEAS.filter((w) => !used.includes(w.toLowerCase()))
       .sort(() => Math.random() - 0.5)
@@ -1426,7 +1861,10 @@ export class GameEngine {
       clashStep: 'break',
       oppDots: 3,
       outcome: '',
+      headline: '',
+      flavor: '',
       pane: makeBarrierPane(),
+      secondsLeft: this.isOnlineMatch() ? this.serverRoundLimit : this.roundSecs(),
     })
     if (first) {
       this.t(() => {
@@ -1453,18 +1891,49 @@ export class GameEngine {
   }
 
   startTyping(): void {
-    this.setState({ phase: 'typing', secondsLeft: this.roundSecs(), crackLevel: 0.14 })
+    const secs = this.isOnlineMatch() ? this.serverRoundLimit : this.roundSecs()
+    this.setState({ phase: 'typing', secondsLeft: secs, crackLevel: 0.14 })
     if (this.state.tutorMode) {
       this.setState({ coachStep: 0, coachRect: null })
+      return
+    }
+    if (this.isOnlineMatch()) {
+      void this.armOnlineRoundClock()
       return
     }
     this.startTypingEngine()
   }
 
+  private async armOnlineRoundClock(): Promise<void> {
+    if (!this.transport || !this.activeMatchId || !this.activeRoundId) return
+    if (this.onlineClockArmed && this.roundEndsAt) {
+      this.startTypingEngine()
+      return
+    }
+    try {
+      const result = await this.transport.startRound(this.activeMatchId, this.activeRoundId)
+      this.activeRoundId = result.roundId
+      this.applyRoundClock(result.roundEndsAt, result.roundTimeLimitSeconds)
+      if (this.state.phase === 'typing') this.startTypingEngine()
+    } catch (err) {
+      console.warn('[online] failed to arm round clock', err)
+      // Soft fallback so the UI isn't stuck if start fails mid-match.
+      this.useWallClock = false
+      this.onlineClockArmed = false
+      if (this.state.phase === 'typing') this.startTypingEngine()
+    }
+  }
+
   private startTypingEngine(): void {
     if (this.tickRAF) return
-    const dur = this.roundSecs()
-    this.deadline = performance.now() + dur * 1000
+    const online = this.isOnlineMatch() && this.useWallClock && !!this.roundEndsAt
+    const dur = online ? this.serverRoundLimit : this.roundSecs()
+    if (online) {
+      this.deadline = Date.parse(this.roundEndsAt!)
+    } else {
+      this.deadline = performance.now() + dur * 1000
+      this.useWallClock = false
+    }
     this.lastWhole = dur
     const loop = () => {
       if (this.state.phase !== 'typing') {
@@ -1472,7 +1941,9 @@ export class GameEngine {
         return
       }
       const s = this.state
-      const remain = (this.deadline - performance.now()) / 1000
+      const remain = this.useWallClock
+        ? (this.deadline - Date.now()) / 1000
+        : (this.deadline - performance.now()) / 1000
       const whole = Math.max(0, Math.ceil(remain))
       if (!(s.youLocked && s.oppLocked)) {
         const target = 0.16 + 0.82 * Math.max(0, Math.min(1, 1 - remain / dur))
@@ -1498,9 +1969,11 @@ export class GameEngine {
       this.tickRAF = requestAnimationFrame(loop)
     }
     this.tickRAF = requestAnimationFrame(loop)
-    const dms = dur * 1000
-    const botDelay = Math.min(dms - 700, 1600 + Math.random() * (dms * 0.6))
-    this.t(() => this.botLock(), botDelay)
+    if (!this.isOnlineMatch()) {
+      const dms = dur * 1000
+      const botDelay = Math.min(dms - 700, 1600 + Math.random() * (dms * 0.6))
+      this.t(() => this.botLock(), botDelay)
+    }
   }
 
   private botLock(): void {
@@ -1536,7 +2009,7 @@ export class GameEngine {
   }
 
   submit(): void {
-    if (this.state.phase !== 'typing' || this.state.youLocked) return
+    if (this.state.phase !== 'typing' || this.state.youLocked || this.submittingOnline) return
     const err = this.validate(this.state.input)
     if (err) {
       this.setState({ error: err })
@@ -1557,8 +2030,30 @@ export class GameEngine {
       this.botLock()
       return
     }
+    if (this.isOnlineMatch()) {
+      void this.submitOnline(word)
+      return
+    }
     if (this.state.oppLocked) {
       this.t(() => this.beginClash(), 750)
+    }
+  }
+
+  private async submitOnline(word: string): Promise<void> {
+    if (!this.transport || !this.activeMatchId || !this.activeRoundId) return
+    this.submittingOnline = true
+    try {
+      await this.transport.submitThrow(this.activeMatchId, this.activeRoundId, word)
+      // Clash begins only when battle_resolved arrives for both clients.
+    } catch (err) {
+      console.warn('[online] submit failed', err)
+      this.submittingOnline = false
+      this.setState({
+        youLocked: false,
+        yourThrow: '',
+        error: 'Could not lock in — try again',
+      })
+      this.audio.sfx('error')
     }
   }
 
@@ -1572,6 +2067,21 @@ export class GameEngine {
       this.tickRAF = null
     }
     if (this.state.youLocked) return
+
+    if (this.isOnlineMatch()) {
+      const err = this.validate(this.state.input)
+      const word = err ? 'Hesitation' : this.state.input.trim().replace(/\s+/g, ' ')
+      if (err) this.audio.sfx('alarm')
+      this.setState((s) => ({
+        youLocked: true,
+        yourThrow: word,
+        outcome: err ? 'timeout' : s.outcome,
+        crackLevel: Math.min(0.92, s.crackLevel + 0.24),
+      }))
+      void this.submitOnline(word)
+      return
+    }
+
     const err = this.validate(this.state.input)
     if (!err) {
       const word = this.state.input.trim().replace(/\s+/g, ' ')
@@ -1595,8 +2105,53 @@ export class GameEngine {
     }
   }
 
+  private handleBattleResolved(info: BattleResolvedInfo): void {
+    if (!this.isOnlineMatch()) return
+    if (this.activeRoundId && info.roundId !== this.activeRoundId) return
+    if (this.state.phase === 'clash' || this.state.phase === 'end') return
+
+    const youAreP1 = this.playerSide === 'player_1'
+    const yourThrow = youAreP1 ? info.player1Input : info.player2Input
+    const oppThrow = youAreP1 ? info.player2Input : info.player1Input
+    const youScore = youAreP1 ? info.player1Score : info.player2Score
+    const oppScore = youAreP1 ? info.player2Score : info.player1Score
+    const youWon = !!this.selfUserId && info.winnerUserId === this.selfUserId
+    const outcome: RoundOutcome = youWon ? 'you' : 'opp'
+    const winnerThrow = youWon ? yourThrow : oppThrow
+    const loserThrow = youWon ? oppThrow : yourThrow
+    const headline =
+      winnerThrow.toUpperCase() + ' beats ' + loserThrow.toUpperCase()
+
+    this.submittingOnline = false
+    this.scoresFromServer = true
+    if (this.tickRAF) {
+      cancelAnimationFrame(this.tickRAF)
+      this.tickRAF = null
+    }
+    this.setState({
+      youLocked: true,
+      oppLocked: true,
+      yourThrow: yourThrow || this.state.yourThrow,
+      oppThrow: oppThrow || this.state.oppThrow,
+      youScore,
+      oppScore,
+      outcome,
+      headline,
+      flavor: info.battleDescription || '',
+    })
+    this.beginClash()
+  }
+
   /** Score mutation stays here; the pure you-vs-opp comparison lives in `resolveThrow`. */
   private decideOutcome(): { outcome: RoundOutcome; headline: string; flavor: string } {
+    // Online rounds already stamped outcome/headline/flavor from battle_resolved.
+    if (this.scoresFromServer && this.state.outcome && this.state.outcome !== 'timeout') {
+      return {
+        outcome: this.state.outcome as RoundOutcome,
+        headline: this.state.headline,
+        flavor: this.state.flavor,
+      }
+    }
     const { yourThrow, oppThrow, outcome } = this.state
     if (outcome === 'timeout') {
       return {
@@ -1650,23 +2205,41 @@ export class GameEngine {
           ? makeBurst(emojiFor(oppThrow))
           : []
     this.audio.sfx(outcome === 'you' ? 'winRound' : outcome === 'tie' ? 'tieRound' : 'loseRound')
-    this.t(
-      () =>
-        this.botChat(
-          rand(outcome === 'you' ? this.BOT_LOSE : outcome === 'opp' ? this.BOT_WIN : this.BOT_TIE),
-        ),
-      1400,
-    )
+    if (!this.isOnlineMatch()) {
+      this.t(
+        () =>
+          this.botChat(
+            rand(outcome === 'you' ? this.BOT_LOSE : outcome === 'opp' ? this.BOT_WIN : this.BOT_TIE),
+          ),
+        1400,
+      )
+    }
     this.setState((s) => ({
       clashStep: 'verdict',
       burst,
-      youScore: s.youScore + (outcome === 'you' ? 1 : 0),
-      oppScore: s.oppScore + (outcome === 'opp' ? 1 : 0),
-      // outcome is guaranteed you/opp/tie here (timeout was resolved to 'opp' in beginClash)
+      youScore: this.scoresFromServer ? s.youScore : s.youScore + (outcome === 'you' ? 1 : 0),
+      oppScore: this.scoresFromServer ? s.oppScore : s.oppScore + (outcome === 'opp' ? 1 : 0),
       history: [...s.history, { round, you: yourThrow, opp: oppThrow, outcome: outcome as RoundOutcome }],
     }))
     if (this.state.tutorMode && this.state.coachStep === 3) this.setState({ coachStep: 4 })
     if (this.state.tutorMode) return
+
+    if (this.isOnlineMatch()) {
+      if (this.matchCompletedInfo) {
+        this.t(() => this.endMatch(), 3800)
+        return
+      }
+      const N = 10
+      for (let n = N; n >= 1; n--) {
+        this.t(() => {
+          this.setState({ verdictCount: n })
+          if (n <= 3) this.audio.sfx('count')
+        }, 300 + (N - n) * 1000)
+      }
+      this.t(() => this.advanceAfterOnlineVerdict(), 300 + N * 1000)
+      return
+    }
+
     const { youScore, oppScore } = this.state
     const done = youScore >= this.winTarget || oppScore >= this.winTarget
     if (done) {
@@ -1687,8 +2260,36 @@ export class GameEngine {
     }, 300 + N * 1000)
   }
 
+  private advanceAfterOnlineVerdict(): void {
+    this.setState({ verdictCount: 0 })
+    if (this.matchCompletedInfo) {
+      this.endMatch()
+      return
+    }
+    if (this.pendingNextRound) {
+      this.startRound()
+      return
+    }
+    // Socket may lag a beat behind the verdict countdown — wait briefly.
+    this.t(() => {
+      if (this.matchCompletedInfo) {
+        this.endMatch()
+      } else if (this.pendingNextRound) {
+        this.startRound()
+      } else {
+        console.warn('[online] missing next_round_started / match_completed')
+        this.toMenu()
+      }
+    }, 600)
+  }
+
   private endMatch(): void {
-    const win = this.state.youScore >= this.winTarget
+    this.matchAccepted = false
+    const win =
+      this.state.forfeitWin ||
+      (this.matchCompletedInfo && this.selfUserId
+        ? this.matchCompletedInfo.winnerUserId === this.selfUserId
+        : this.state.youScore >= this.winTarget)
     const colors = ['#ff4d6d', '#ffd233', '#00c9b8', '#8b6cf2', '#ff8a6e']
     const winEmojis = this.state.history
       .filter((h) => h.outcome === 'you')
@@ -1732,8 +2333,31 @@ export class GameEngine {
   }
 
   rematch(): void {
-    this.clearAll()
     this.audio.sfx('click')
+    if (this.transport && this.state.matchMode === 'online' && this.activeMatchId) {
+      if (this.state.rematchWaiting) return
+      this.setState({
+        rematchWaiting: true,
+        rematchNotice: 'Waiting for opponent…',
+      })
+      void this.transport
+        .requestRematch(this.activeMatchId)
+        .then((result) => {
+          if (result.status === 'matched') {
+            // match_found socket will start the face-off.
+            this.setState({ rematchWaiting: false, rematchNotice: '' })
+          }
+        })
+        .catch((err) => {
+          console.warn('[rematch] failed', err)
+          this.setState({
+            rematchWaiting: false,
+            rematchNotice: 'Could not request rematch',
+          })
+        })
+      return
+    }
+    this.clearAll()
     this.setState({
       round: 1,
       youScore: 0,
@@ -1745,7 +2369,92 @@ export class GameEngine {
       chatMsgs: [],
       chatUnread: 0,
       chatToast: null,
+      forfeitWin: false,
+      rematchWaiting: false,
+      rematchNotice: '',
     })
     this.startRound()
+  }
+
+  setPrivateJoinDraft(v: string): void {
+    this.setState({
+      privateJoinDraft: v.toUpperCase().replace(/[^A-F0-9]/gi, '').slice(0, 6),
+      privateError: '',
+    })
+  }
+
+  createPrivateLobby(): void {
+    if (!this.transport) {
+      this.setState({ privateError: 'Online connection required' })
+      return
+    }
+    this.audio.sfx('click')
+    this.setState({ privateError: '' })
+      void this.transport
+      .createPrivateLobby()
+      .then((info) => {
+        this.searchEpoch += 1
+        this.matchAccepted = false
+        this.setState({
+          privateInviteCode: info.inviteCode,
+          privateError: '',
+        })
+      })
+      .catch((err) => {
+        console.warn('[private] create failed', err)
+        this.setState({ privateError: 'Could not create room' })
+      })
+  }
+
+  joinPrivateLobby(): void {
+    if (!this.transport) {
+      this.setState({ privateError: 'Online connection required' })
+      return
+    }
+    const code = this.state.privateJoinDraft.trim().toUpperCase()
+    if (code.length !== 6) {
+      this.setState({ privateError: 'Enter the 6-character room code' })
+      return
+    }
+    this.audio.sfx('click')
+    this.searchEpoch += 1
+    this.matchAccepted = false
+    void this.transport
+      .joinPrivateLobby(code)
+      .then(() => {
+        this.setState({ privateError: '' })
+      })
+      .catch((err) => {
+        console.warn('[private] join failed', err)
+        this.setState({ privateError: 'Room not found or unavailable' })
+      })
+  }
+
+  cancelPrivateLobby(): void {
+    this.audio.sfx('click')
+    if (this.transport && this.state.privateInviteCode) {
+      void this.transport.cancelPrivateLobby().catch(() => undefined)
+    }
+    this.setState({
+      privateInviteCode: '',
+      privateError: '',
+    })
+  }
+
+  copyPrivateCode(): void {
+    const code = this.state.privateInviteCode
+    if (!code) return
+    this.audio.sfx('click')
+    try {
+      void navigator.clipboard.writeText(code)
+      this.setState({ privateError: 'Code copied!' })
+      this.t(() => {
+        if (this.state.privateError === 'Code copied!') {
+          this.setState({ privateError: '' })
+        }
+      }, 1600)
+    } catch {
+      this.setState({ privateError: 'Could not copy code' })
+    }
   }
 }

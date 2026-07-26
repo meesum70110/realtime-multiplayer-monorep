@@ -7,6 +7,7 @@ import { MatchmakingStateModule } from './matchmaking-state.module';
 import { MatchmakingService } from './matchmaking.service';
 import { FifoMatchmakingStrategy } from './services/fifo-matchmaking.strategy';
 import { MatchmakingModeService } from './services/matchmaking-mode.service';
+import { PrivateLobbyService } from './services/private-lobby.service';
 
 @Module({
   imports: [MatchesModule, MatchmakingStateModule, RealtimeModule],
@@ -15,6 +16,7 @@ import { MatchmakingModeService } from './services/matchmaking-mode.service';
     MatchmakingService,
     FifoMatchmakingStrategy,
     MatchmakingModeService,
+    PrivateLobbyService,
   ],
 })
 export class MatchmakingModule {}
