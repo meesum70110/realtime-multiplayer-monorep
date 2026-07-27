@@ -11,17 +11,61 @@ import type {
 
 /**
  * Nest mounts REST under the global `api` prefix (`POST /api/auth/guest`).
- * Production often sets VITE_API_URL to the bare Render origin; ensure `/api`.
+ * Always resolve an absolute backend origin — never a relative `/api/...` path
+ * (that would hit Vercel instead of Render).
  */
 function resolveApiUrl(): string {
-  let raw = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').trim().replace(/\/$/, '')
-  if (!/\/api$/i.test(raw)) {
-    raw = `${raw}/api`
+  const viteApi = (import.meta.env.VITE_API_URL as string | undefined)?.trim()
+  // Some dashboards use NEXT_PUBLIC_* by habit — accept it as a fallback.
+  const nextApi = (import.meta.env.NEXT_PUBLIC_API_URL as string | undefined)?.trim()
+  const wsUrl = (import.meta.env.VITE_WS_URL as string | undefined)?.trim()
+
+  let raw = viteApi || nextApi || ''
+
+  if (!raw && wsUrl) {
+    raw = wsUrl
+      .replace(/^ws:/i, 'http:')
+      .replace(/^wss:/i, 'https:')
+      .replace(/\/$/, '')
+      .replace(/\/realtime$/i, '')
   }
+
+  if (!raw) {
+    raw = import.meta.env.PROD ? '' : 'http://localhost:3001/api'
+  }
+
+  raw = raw.trim().replace(/\/$/, '')
+
+  if (!raw) {
+    console.error(
+      '[api] VITE_API_URL is missing in this production build. Bot/online REST calls cannot reach Render.',
+    )
+    // Last resort so callers still construct a URL (will fail loudly, not hit Vercel /api).
+    raw = 'https://rpsa-api.onrender.com/api'
+  }
+
+  // Protocol-relative or bare host → https in prod.
+  if (!/^https?:\/\//i.test(raw)) {
+    raw = `https://${raw}`
+  }
+
+  if (!/\/api$/i.test(raw)) {
+    raw = `${raw.replace(/\/realtime$/i, '')}/api`
+  }
+
+  if (import.meta.env.PROD && /localhost|127\.0\.0\.1/i.test(raw)) {
+    console.error('[api] refusing localhost API URL in production build:', raw)
+    raw = 'https://rpsa-api.onrender.com/api'
+  }
+
   return raw
 }
 
 const API_URL = resolveApiUrl()
+
+if (import.meta.env.DEV || import.meta.env.PROD) {
+  console.info('[api] REST base URL =', API_URL)
+}
 
 const TOKEN_KEY = 'rpsa-access-token'
 const REFRESH_KEY = 'rpsa-refresh-token'
@@ -331,25 +375,32 @@ export async function resolveDuelJudge(
   headline: string
   battleDescription: string
 }> {
-  const raw = await request<{
-    winner_slot: 'first' | 'second' | 'tie'
-    headline: string
-    battle_description: string
-  }>(
-    '/duel-resolver/mock',
-    {
-      method: 'POST',
-      body: JSON.stringify({
-        first_input: firstInput,
-        second_input: secondInput,
-      }),
-    },
-    false,
-  )
-  return {
-    winnerSlot: raw.winner_slot,
-    headline: raw.headline,
-    battleDescription: raw.battle_description,
+  const path = '/duel-resolver/mock'
+  const absoluteUrl = `${API_URL}${path}`
+  try {
+    const raw = await request<{
+      winner_slot: 'first' | 'second' | 'tie'
+      headline: string
+      battle_description: string
+    }>(
+      path,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          first_input: firstInput,
+          second_input: secondInput,
+        }),
+      },
+      false,
+    )
+    return {
+      winnerSlot: raw.winner_slot,
+      headline: raw.headline,
+      battleDescription: raw.battle_description,
+    }
+  } catch (err) {
+    console.warn('[judge] duel resolve failed', absoluteUrl, err)
+    throw err
   }
 }
 

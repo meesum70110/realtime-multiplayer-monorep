@@ -24,8 +24,11 @@ async function bootstrap(): Promise<void> {
   );
 
   app.enableCors({
-    origin: '*',
+    // Reflect the request Origin so credentialed/preflight POSTs from Vercel work.
+    // (origin: '*' + credentials: true is invalid and browsers will block.)
+    origin: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
   });
 

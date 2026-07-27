@@ -433,8 +433,14 @@ export async function bootOnlineSession(engine: {
 
     return transport
   } catch (err) {
-    console.warn('[boot] online session unavailable — falling back to offline bot', err)
-    engine.setTransport(null)
-    return null
+    console.warn(
+      '[boot] online session unavailable — offline bot mode (keeping REST judge transport)',
+      err,
+    )
+    // Guest/realtime failed, but duel-resolver/mock is @Public — still wire the
+    // same MatchTransport so ghost/bot clashes can hit the Render Groq judge.
+    const judgeTransport = createMatchTransport()
+    engine.setTransport(judgeTransport)
+    return judgeTransport
   }
 }
