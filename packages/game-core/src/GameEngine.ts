@@ -2176,12 +2176,16 @@ export class GameEngine {
     const oppThrow = youAreP1 ? info.player2Input : info.player1Input
     const youScore = youAreP1 ? info.player1Score : info.player2Score
     const oppScore = youAreP1 ? info.player2Score : info.player1Score
-    const youWon = !!this.selfUserId && info.winnerUserId === this.selfUserId
-    const outcome: RoundOutcome = youWon ? 'you' : 'opp'
+    const isTie = info.isTie || !info.winnerUserId
+    const youWon = !isTie && !!this.selfUserId && info.winnerUserId === this.selfUserId
+    const outcome: RoundOutcome = isTie ? 'tie' : youWon ? 'you' : 'opp'
     const winnerThrow = youWon ? yourThrow : oppThrow
     const loserThrow = youWon ? oppThrow : yourThrow
     const headline =
-      winnerThrow.toUpperCase() + ' beats ' + loserThrow.toUpperCase()
+      info.headline ||
+      (isTie
+        ? 'EQUAL MATCH'
+        : winnerThrow.toUpperCase() + ' beats ' + loserThrow.toUpperCase())
 
     this.submittingOnline = false
     this.scoresFromServer = true

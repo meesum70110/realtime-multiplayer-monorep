@@ -104,8 +104,10 @@ export type OpponentSubmittedRaw = {
 export type BattleResolvedRaw = {
   round_id: string
   battle_description: string
-  winner_user_id: string
-  winner_item_id: string
+  headline?: string
+  winner_user_id: string | null
+  winner_item_id: string | null
+  is_tie?: boolean
   player_1_user_id: string
   player_2_user_id: string
   player_1_input: string

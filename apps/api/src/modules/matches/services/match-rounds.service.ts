@@ -314,6 +314,8 @@ export class MatchRoundsService {
       secondSubmission,
     );
     const winnerSubmission = duelResolution.winnerSubmission;
+    const isTie =
+      duelResolution.winnerSlot === 'tie' || winnerSubmission === null;
 
     round.roundStatus = RoundStatus.Resolving;
     round.lockedAt = new Date();
@@ -322,13 +324,15 @@ export class MatchRoundsService {
     round.battleDescription = duelResolution.battleDescription;
     round.resolvedAt = new Date();
     round.roundStatus = RoundStatus.Resolved;
-    round.winnerUserId = winnerSubmission.userId;
+    round.winnerUserId = winnerSubmission?.userId ?? null;
     await this.roundsRepository.save(round);
 
-    if (winnerSubmission.userId === match.player1UserId) {
-      match.player1Score += 1;
-    } else {
-      match.player2Score += 1;
+    if (winnerSubmission !== null) {
+      if (winnerSubmission.userId === match.player1UserId) {
+        match.player1Score += 1;
+      } else {
+        match.player2Score += 1;
+      }
     }
 
     const winningScore = Math.max(match.player1Score, match.player2Score);
@@ -343,6 +347,7 @@ export class MatchRoundsService {
 
     this.realtimeGateway.emitToMatch(match.id, 'battle_resolved', {
       battle_description: round.battleDescription,
+      headline: duelResolution.headline,
       player_1_input: player1Submission?.rawInput ?? '',
       player_1_score: match.player1Score,
       player_1_user_id: match.player1UserId,
@@ -350,8 +355,9 @@ export class MatchRoundsService {
       player_2_score: match.player2Score,
       player_2_user_id: match.player2UserId,
       round_id: round.id,
-      winner_item_id: winnerSubmission.itemId,
-      winner_user_id: winnerSubmission.userId,
+      winner_item_id: winnerSubmission?.itemId ?? null,
+      winner_user_id: winnerSubmission?.userId ?? null,
+      is_tie: isTie,
     });
 
     if (winningScore >= requiredWins || round.roundNumber >= match.bestOf) {

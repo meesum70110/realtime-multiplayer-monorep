@@ -321,6 +321,7 @@ function mapBattleResolved(raw: BattleResolvedRaw): BattleResolvedInfo {
   return {
     roundId: raw.round_id,
     battleDescription: raw.battle_description,
+    headline: raw.headline?.trim() || '',
     winnerUserId: raw.winner_user_id,
     player1UserId: raw.player_1_user_id,
     player2UserId: raw.player_2_user_id,
@@ -328,6 +329,7 @@ function mapBattleResolved(raw: BattleResolvedRaw): BattleResolvedInfo {
     player2Input: raw.player_2_input,
     player1Score: raw.player_1_score,
     player2Score: raw.player_2_score,
+    isTie: raw.is_tie === true || raw.winner_user_id === null,
   }
 }
 

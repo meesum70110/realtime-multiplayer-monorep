@@ -34,6 +34,9 @@ export class DuelResultEntity {
   @Column({ name: 'result_type', type: 'varchar', length: 30, default: 'win' })
   resultType!: string;
 
+  @Column({ name: 'headline', type: 'varchar', length: 120, nullable: true })
+  headline!: string | null;
+
   @Column({ name: 'battle_description', type: 'text' })
   battleDescription!: string;
 

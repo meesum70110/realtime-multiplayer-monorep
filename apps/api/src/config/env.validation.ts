@@ -99,5 +99,6 @@ export function validateEnv(config: EnvRecord): EnvRecord {
       'AUTH_REFRESH_TOKEN_TTL_DAYS',
       30,
     ),
+    GROQ_API_KEY: readString(config, 'GROQ_API_KEY', ''),
   };
 }

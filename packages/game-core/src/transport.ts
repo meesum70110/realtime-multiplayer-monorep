@@ -39,13 +39,15 @@ export interface OpponentSubmittedInfo {
 export interface BattleResolvedInfo {
   roundId: string
   battleDescription: string
-  winnerUserId: string
+  headline: string
+  winnerUserId: string | null
   player1UserId: string
   player2UserId: string
   player1Input: string
   player2Input: string
   player1Score: number
   player2Score: number
+  isTie: boolean
 }
 
 export interface NextRoundInfo {
