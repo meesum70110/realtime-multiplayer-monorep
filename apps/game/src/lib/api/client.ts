@@ -322,6 +322,37 @@ export async function cancelPrivateLobby(): Promise<void> {
   await request('/matchmaking/private', { method: 'DELETE' })
 }
 
+/** Offline / bot AI judge — same Groq path as live duel resolution. */
+export async function resolveDuelJudge(
+  firstInput: string,
+  secondInput: string,
+): Promise<{
+  winnerSlot: 'first' | 'second' | 'tie'
+  headline: string
+  battleDescription: string
+}> {
+  const raw = await request<{
+    winner_slot: 'first' | 'second' | 'tie'
+    headline: string
+    battle_description: string
+  }>(
+    '/duel-resolver/mock',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        first_input: firstInput,
+        second_input: secondInput,
+      }),
+    },
+    false,
+  )
+  return {
+    winnerSlot: raw.winner_slot,
+    headline: raw.headline,
+    battleDescription: raw.battle_description,
+  }
+}
+
 export async function pingHealth(): Promise<boolean> {
   try {
     await request('/health', { method: 'GET' }, false)

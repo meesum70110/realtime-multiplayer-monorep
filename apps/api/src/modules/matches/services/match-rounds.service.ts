@@ -346,7 +346,7 @@ export class MatchRoundsService {
     );
 
     this.realtimeGateway.emitToMatch(match.id, 'battle_resolved', {
-      battle_description: round.battleDescription,
+      battle_description: duelResolution.battleDescription,
       headline: duelResolution.headline,
       player_1_input: player1Submission?.rawInput ?? '',
       player_1_score: match.player1Score,

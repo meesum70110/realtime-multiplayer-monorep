@@ -179,6 +179,10 @@ export class GameEngine {
   private scoresFromServer = false
   private onlineClockArmed = false
   private submittingOnline = false
+  /** Offline/ghost AI judge result waiting to be consumed by beginClash. */
+  private pendingAiVerdict: { outcome: RoundOutcome; headline: string; flavor: string } | null =
+    null
+  private aiJudging = false
 
   private readonly morphPool: MorphSym[] = [
     'fire',
@@ -1573,6 +1577,8 @@ export class GameEngine {
     this.pendingNextRound = null
     this.matchCompletedInfo = null
     this.scoresFromServer = false
+    this.pendingAiVerdict = null
+    this.aiJudging = false
     this.playerSide = null
     this.submittingOnline = false
     this.audio.sfx('click')
@@ -1668,6 +1674,8 @@ export class GameEngine {
     this.pendingNextRound = null
     this.matchCompletedInfo = null
     this.scoresFromServer = false
+    this.pendingAiVerdict = null
+    this.aiJudging = false
     this.playerSide = info.playerSide
     this.serverRoundLimit = info.roundTimeLimitSeconds || DEFAULT_PROPS.timerSeconds
 
@@ -1841,6 +1849,8 @@ export class GameEngine {
     this.pendingNextRound = null
     this.matchCompletedInfo = null
     this.scoresFromServer = false
+    this.pendingAiVerdict = null
+    this.aiJudging = false
     this.playerSide = null
     this.clearAll()
     this.audio.sfx('click')
@@ -1891,6 +1901,8 @@ export class GameEngine {
     this.useWallClock = false
     this.roundEndsAt = null
     this.scoresFromServer = false
+    this.pendingAiVerdict = null
+    this.aiJudging = false
     this.submittingOnline = false
     if (this.pendingNextRound && this.isOnlineMatch()) {
       this.activeRoundId = this.pendingNextRound.roundId
@@ -2169,7 +2181,7 @@ export class GameEngine {
   private handleBattleResolved(info: BattleResolvedInfo): void {
     if (!this.isOnlineMatch()) return
     if (this.activeRoundId && info.roundId !== this.activeRoundId) return
-    if (this.state.phase === 'clash' || this.state.phase === 'end') return
+    if (this.state.phase === 'end') return
 
     const youAreP1 = this.playerSide === 'player_1'
     const yourThrow = youAreP1 ? info.player1Input : info.player2Input
@@ -2181,8 +2193,9 @@ export class GameEngine {
     const outcome: RoundOutcome = isTie ? 'tie' : youWon ? 'you' : 'opp'
     const winnerThrow = youWon ? yourThrow : oppThrow
     const loserThrow = youWon ? oppThrow : yourThrow
+    const aiFlavor = (info.battleDescription || '').trim()
     const headline =
-      info.headline ||
+      (info.headline || '').trim() ||
       (isTie
         ? 'EQUAL MATCH'
         : winnerThrow.toUpperCase() + ' beats ' + loserThrow.toUpperCase())
@@ -2193,6 +2206,9 @@ export class GameEngine {
       cancelAnimationFrame(this.tickRAF)
       this.tickRAF = null
     }
+
+    // Always stamp the AI judge text — even if a local clash already started
+    // (which would otherwise leave funnyFlavor templates on screen).
     this.setState({
       youLocked: true,
       oppLocked: true,
@@ -2202,18 +2218,29 @@ export class GameEngine {
       oppScore,
       outcome,
       headline,
-      flavor: info.battleDescription || '',
+      flavor: aiFlavor,
     })
+
+    if (this.state.phase === 'clash') {
+      return
+    }
     this.beginClash()
   }
 
-  /** Score mutation stays here; the pure you-vs-opp comparison lives in `resolveThrow`. */
+  /**
+   * Online: server battle_resolved. Offline/ghost: pending Groq verdict, else resolveThrow.
+   */
   private decideOutcome(): { outcome: RoundOutcome; headline: string; flavor: string } {
-    // Online rounds already stamped outcome/headline/flavor from battle_resolved.
-    if (this.scoresFromServer && this.state.outcome && this.state.outcome !== 'timeout') {
+    if (this.pendingAiVerdict) {
+      const verdict = this.pendingAiVerdict
+      this.pendingAiVerdict = null
+      return verdict
+    }
+    if (this.scoresFromServer || this.isOnlineMatch()) {
+      const outcome = (this.state.outcome || 'tie') as RoundOutcome
       return {
-        outcome: this.state.outcome as RoundOutcome,
-        headline: this.state.headline,
+        outcome: outcome === 'timeout' ? 'opp' : outcome,
+        headline: this.state.headline || 'VERDICT',
         flavor: this.state.flavor,
       }
     }
@@ -2229,6 +2256,73 @@ export class GameEngine {
   }
 
   private beginClash(): void {
+    if (this.state.phase === 'clash' || this.aiJudging) return
+    if (this.isOnlineMatch() && !this.scoresFromServer) {
+      return
+    }
+    if (!this.isOnlineMatch() && this.transport?.resolveDuel && !this.pendingAiVerdict) {
+      void this.beginBotClashWithAi()
+      return
+    }
+    this.runClashAnimation()
+  }
+
+  private async beginBotClashWithAi(): Promise<void> {
+    if (this.aiJudging || this.state.phase === 'clash') return
+    const transport = this.transport
+    if (!transport?.resolveDuel) {
+      this.runClashAnimation()
+      return
+    }
+
+    this.aiJudging = true
+    const you = this.state.yourThrow
+    const opp = this.state.oppThrow
+    try {
+      const judged = await transport.resolveDuel(you, opp)
+      if (
+        this.state.phase === 'clash' ||
+        this.state.phase === 'end' ||
+        this.state.phase === 'menu' ||
+        this.state.phase === 'searching'
+      ) {
+        return
+      }
+      const outcome: RoundOutcome =
+        judged.winnerSlot === 'tie'
+          ? 'tie'
+          : judged.winnerSlot === 'first'
+            ? 'you'
+            : 'opp'
+      const headline =
+        judged.headline.trim() ||
+        (outcome === 'tie'
+          ? 'EQUAL MATCH'
+          : outcome === 'you'
+            ? `${you.toUpperCase()} BEATS ${opp.toUpperCase()}`
+            : `${opp.toUpperCase()} BEATS ${you.toUpperCase()}`)
+      const flavor = judged.battleDescription.trim()
+      this.pendingAiVerdict = { outcome, headline, flavor }
+      this.setState({ outcome, headline, flavor })
+    } catch (err) {
+      console.warn('[judge] bot AI resolve failed — local fallback', err)
+      this.pendingAiVerdict = null
+    } finally {
+      this.aiJudging = false
+    }
+
+    if (
+      this.state.phase === 'clash' ||
+      this.state.phase === 'end' ||
+      this.state.phase === 'menu' ||
+      this.state.phase === 'searching'
+    ) {
+      return
+    }
+    this.runClashAnimation()
+  }
+
+  private runClashAnimation(): void {
     if (this.state.phase === 'clash') return
     this.clearAll()
     const verdict = this.decideOutcome()
@@ -2243,7 +2337,7 @@ export class GameEngine {
     this.lastDieAnim = dieAnim
     this.setState({
       phase: 'clash',
-      clashStep: 'break',
+      clashStep: 'fight',
       clashAnim,
       dieAnim,
       shards: makeShards(2.75),

@@ -106,6 +106,12 @@ export interface ChatMessageInfo {
   sentAt: string
 }
 
+export interface DuelJudgeResult {
+  winnerSlot: 'first' | 'second' | 'tie'
+  headline: string
+  battleDescription: string
+}
+
 /**
  * Injected by the app shell so GameEngine can talk to Safwan's Nest API
  * without game-core importing fetch/socket.io directly.
@@ -124,6 +130,11 @@ export interface MatchTransport {
   cancelPrivateLobby(): Promise<void>
   /** Emit a quick-chat / emote to the match room (online only). */
   sendChatMessage(matchId: string, text: string): void
+  /**
+   * Offline / ghost AI judge — POST /api/duel-resolver/mock.
+   * `first` = player throw, `second` = bot throw.
+   */
+  resolveDuel(firstInput: string, secondInput: string): Promise<DuelJudgeResult>
 
   onMatchFound(handler: (info: MatchFoundInfo) => void): () => void
   onQueueCancelled?(handler: (queueEntryId: string) => void): () => void

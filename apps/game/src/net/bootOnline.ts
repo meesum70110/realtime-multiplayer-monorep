@@ -25,6 +25,7 @@ import {
   joinMatchmakingQueue,
   joinPrivateLobby,
   requestRematch,
+  resolveDuelJudge,
   startMatchRound,
   submitMatchThrow,
 } from '@/lib/api/client'
@@ -222,6 +223,10 @@ export function createMatchTransport(): MatchTransport {
       emitChatMessage(matchId, text)
     },
 
+    async resolveDuel(firstInput: string, secondInput: string) {
+      return resolveDuelJudge(firstInput, secondInput)
+    },
+
     onMatchFound(handler: MatchFoundListener): () => void {
       matchFoundListeners.add(handler)
       return () => {
@@ -320,7 +325,7 @@ function mapRoundStarted(raw: RoundStartRaw): RoundStartedInfo {
 function mapBattleResolved(raw: BattleResolvedRaw): BattleResolvedInfo {
   return {
     roundId: raw.round_id,
-    battleDescription: raw.battle_description,
+    battleDescription: (raw.battle_description || '').trim(),
     headline: raw.headline?.trim() || '',
     winnerUserId: raw.winner_user_id,
     player1UserId: raw.player_1_user_id,
