@@ -3,8 +3,10 @@ import { randomUUID } from 'node:crypto';
 import { Logger } from '@nestjs/common';
 import {
   ConnectedSocket,
+  MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
@@ -12,6 +14,11 @@ import { Server } from 'socket.io';
 
 import { AuthenticatedSocket } from '../../common/auth/authenticated-socket.interface';
 import { SessionAuthService } from '../auth/services/session-auth.service';
+
+/** Strict max length for match chat / emote payloads. */
+const CHAT_TEXT_MAX = 50;
+/** Minimum gap between chat emits from the same socket. */
+const CHAT_RATE_LIMIT_MS = 2_000;
 
 @WebSocketGateway({
   cors: {
@@ -34,6 +41,9 @@ export class RealtimeGateway
   private readonly fullyDisconnectedHandlers: Array<
     (userId: string) => void | Promise<void>
   > = [];
+
+  /** socketId → last successful chat emit timestamp (rate limit). */
+  private readonly chatLastSentAt = new Map<string, number>();
 
   constructor(private readonly sessionAuthService: SessionAuthService) {}
 
@@ -102,6 +112,8 @@ export class RealtimeGateway
   }
 
   handleDisconnect(@ConnectedSocket() client: AuthenticatedSocket): void {
+    this.chatLastSentAt.delete(client.id);
+
     const userId = client.data.auth?.userId;
     if (userId === undefined) {
       return;
@@ -119,6 +131,58 @@ export class RealtimeGateway
         });
       }
     }
+  }
+
+  /**
+   * Match chat / quick emotes. Client emits `send_chat_message`;
+   * server relays `chat_message` strictly to others in `match:{id}`.
+   * Enforces 50-char max + 1 message / 2s per socket.
+   */
+  @SubscribeMessage('send_chat_message')
+  handleSendChatMessage(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody()
+    body: { match_id?: unknown; text?: unknown },
+  ): void {
+    const userId = client.data.auth?.userId;
+    if (userId === undefined) {
+      return;
+    }
+
+    const now = Date.now();
+    const lastSent = this.chatLastSentAt.get(client.id) ?? 0;
+    if (now - lastSent < CHAT_RATE_LIMIT_MS) {
+      return;
+    }
+
+    const matchId =
+      typeof body?.match_id === 'string' ? body.match_id.trim() : '';
+    const rawText = typeof body?.text === 'string' ? body.text : '';
+    const normalized = rawText.replace(/\s+/g, ' ').trim();
+
+    // Strict length gate — drop oversized payloads instead of silently clipping spam.
+    if (!matchId || !normalized || normalized.length > CHAT_TEXT_MAX) {
+      return;
+    }
+
+    const text = normalized;
+
+    const fromDisplayName =
+      client.data.user?.displayName?.trim() ||
+      (client.data.auth?.isGuest ? 'Guest' : 'Rival');
+
+    const payload = {
+      match_id: matchId,
+      from_user_id: userId,
+      from_display_name: fromDisplayName,
+      text,
+      sent_at: new Date().toISOString(),
+    };
+
+    this.chatLastSentAt.set(client.id, now);
+
+    // Exclude sender — they already render the bubble optimistically.
+    client.to(this.getMatchRoom(matchId)).emit('chat_message', payload);
   }
 
   getOnlineUserCount(): number {

@@ -1,5 +1,6 @@
 import type {
   BattleResolvedInfo,
+  ChatMessageInfo,
   MatchCompletedInfo,
   MatchForfeitedInfo,
   MatchFoundInfo,
@@ -29,6 +30,7 @@ import {
 } from '@/lib/api/client'
 import type {
   BattleResolvedRaw,
+  ChatMessageRaw,
   MatchCompletedRaw,
   MatchForfeitedRaw,
   MatchFoundRaw,
@@ -41,6 +43,7 @@ import type {
 } from '@/lib/api/types'
 import {
   connectRealtime,
+  emitChatMessage,
   setRealtimeHandlers,
   waitForConnectionReady,
 } from '@/lib/socket'
@@ -56,6 +59,7 @@ type MatchForfeitedListener = (info: MatchForfeitedInfo) => void
 type RematchRequestedListener = (info: RematchRequestedInfo) => void
 type RematchDeclinedListener = (info: RematchDeclinedInfo) => void
 type PresenceListener = (playersOnline: number) => void
+type ChatMessageListener = (info: ChatMessageInfo) => void
 
 /**
  * App-side adapter that implements game-core's MatchTransport against
@@ -73,6 +77,7 @@ export function createMatchTransport(): MatchTransport {
   const rematchRequestedListeners = new Set<RematchRequestedListener>()
   const rematchDeclinedListeners = new Set<RematchDeclinedListener>()
   const presenceListeners = new Set<PresenceListener>()
+  const chatMessageListeners = new Set<ChatMessageListener>()
 
   setRealtimeHandlers({
     onMatchFound: (raw) => {
@@ -133,6 +138,16 @@ export function createMatchTransport(): MatchTransport {
     },
     onPresenceUpdated: (raw: PresenceUpdatedRaw) => {
       for (const listener of presenceListeners) listener(raw.players_online)
+    },
+    onChatMessage: (raw: ChatMessageRaw) => {
+      const info: ChatMessageInfo = {
+        matchId: raw.match_id,
+        fromUserId: raw.from_user_id,
+        fromDisplayName: raw.from_display_name,
+        text: raw.text,
+        sentAt: raw.sent_at,
+      }
+      for (const listener of chatMessageListeners) listener(info)
     },
     onConnectionReady: (payload) => {
       if (typeof payload.players_online === 'number') {
@@ -201,6 +216,10 @@ export function createMatchTransport(): MatchTransport {
 
     async cancelPrivateLobby(): Promise<void> {
       await cancelPrivateLobby()
+    },
+
+    sendChatMessage(matchId: string, text: string): void {
+      emitChatMessage(matchId, text)
     },
 
     onMatchFound(handler: MatchFoundListener): () => void {
@@ -277,6 +296,13 @@ export function createMatchTransport(): MatchTransport {
       presenceListeners.add(handler)
       return () => {
         presenceListeners.delete(handler)
+      }
+    },
+
+    onChatMessage(handler: ChatMessageListener): () => void {
+      chatMessageListeners.add(handler)
+      return () => {
+        chatMessageListeners.delete(handler)
       }
     },
   }

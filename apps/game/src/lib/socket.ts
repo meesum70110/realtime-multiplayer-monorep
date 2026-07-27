@@ -2,6 +2,7 @@ import { io, type Socket } from 'socket.io-client'
 import { getAccessToken } from '@/lib/api/client'
 import type {
   BattleResolvedRaw,
+  ChatMessageRaw,
   ConnectionReadyRaw,
   MatchCompletedRaw,
   MatchForfeitedRaw,
@@ -65,6 +66,7 @@ export type RealtimeHandlers = {
   onRematchRequested?: (payload: RematchRequestedRaw) => void
   onRematchDeclined?: (payload: RematchDeclinedRaw) => void
   onPresenceUpdated?: (payload: PresenceUpdatedRaw) => void
+  onChatMessage?: (payload: ChatMessageRaw) => void
   onConnectionReady?: (payload: ConnectionReadyRaw) => void
   onDisconnect?: (reason: string) => void
 }
@@ -193,6 +195,10 @@ export function connectRealtime(accessToken?: string): Socket {
     handlers.onPresenceUpdated?.(payload)
   })
 
+  socket.on('chat_message', (payload: ChatMessageRaw) => {
+    handlers.onChatMessage?.(payload)
+  })
+
   socket.on('disconnect', (reason) => {
     handlers.onDisconnect?.(reason)
     resetReadyPromise()
@@ -217,4 +223,13 @@ export function disconnectRealtime(): void {
   socket = null
   connectionReadyPromise = null
   connectionReadyResolve = null
+}
+
+/** Client → server: match chat / quick emote. */
+export function emitChatMessage(matchId: string, text: string): void {
+  if (!socket?.connected) {
+    console.warn('[realtime] cannot send chat — socket not connected')
+    return
+  }
+  socket.emit('send_chat_message', { match_id: matchId, text })
 }

@@ -96,6 +96,14 @@ export interface RematchResult {
   matchId: string
 }
 
+export interface ChatMessageInfo {
+  matchId: string
+  fromUserId: string
+  fromDisplayName: string
+  text: string
+  sentAt: string
+}
+
 /**
  * Injected by the app shell so GameEngine can talk to Safwan's Nest API
  * without game-core importing fetch/socket.io directly.
@@ -112,6 +120,8 @@ export interface MatchTransport {
   createPrivateLobby(): Promise<PrivateLobbyInfo>
   joinPrivateLobby(inviteCode: string): Promise<{ matchId?: string; status: string }>
   cancelPrivateLobby(): Promise<void>
+  /** Emit a quick-chat / emote to the match room (online only). */
+  sendChatMessage(matchId: string, text: string): void
 
   onMatchFound(handler: (info: MatchFoundInfo) => void): () => void
   onQueueCancelled?(handler: (queueEntryId: string) => void): () => void
@@ -124,4 +134,5 @@ export interface MatchTransport {
   onRematchRequested(handler: (info: RematchRequestedInfo) => void): () => void
   onRematchDeclined(handler: (info: RematchDeclinedInfo) => void): () => void
   onPresenceUpdated(handler: (playersOnline: number) => void): () => void
+  onChatMessage(handler: (info: ChatMessageInfo) => void): () => void
 }

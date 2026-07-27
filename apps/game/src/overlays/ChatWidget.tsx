@@ -142,7 +142,7 @@ export function ChatWidget() {
                   <div style={css('margin: auto; text-align: center; color: #b6a58c; font-size: 12.5px; font-weight: 700; line-height: 1.6;')}>
                     Trash-talk your rival 👇
                     <br />
-                    Tap a quick emote to fire it off.
+                    {vm.chatEmptyHint}
                   </div>
                 )}
                 {vm.chatList.map((m, i) => (
@@ -151,23 +151,59 @@ export function ChatWidget() {
                   </div>
                 ))}
               </div>
-              <div style={css('padding: 9px; border-top: 2px solid #f0e2cd; display: flex; flex-wrap: wrap; gap: 6px; background: #fffdfa; flex-shrink: 0;')}>
-                {vm.quickChats.map((q, i) => (
-                  <Pressable
-                    key={i}
-                    as="button"
-                    onClick={q.send}
-                    baseStyle={css(
-                      "display: inline-flex; align-items: center; gap: 5px; background: #fbf1e4; border: 2px solid #22242a; border-radius: 999px; padding: 6px 11px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 800; color: #22242a; cursor: pointer; box-shadow: 1.5px 2px 0 rgba(34,36,42,0.12); transition: all 0.12s ease;",
+              {vm.chatIsFreeForm ? (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    vm.onSendChatDraft()
+                  }}
+                  style={css(
+                    'padding: 9px; border-top: 2px solid #f0e2cd; display: flex; gap: 8px; background: #fffdfa; flex-shrink: 0; align-items: center;',
+                  )}
+                >
+                  <input
+                    type="text"
+                    value={vm.chatDraft}
+                    onChange={vm.onChatDraft}
+                    maxLength={vm.chatDraftMaxLength}
+                    placeholder="Type a message…"
+                    aria-label="Match chat message"
+                    style={css(
+                      "flex: 1; min-width: 0; height: 38px; box-sizing: border-box; border: 2px solid #22242a; border-radius: 12px; padding: 0 12px; background: #fbf1e4; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; color: #22242a; outline: none;",
                     )}
-                    hoverStyle={css('background: rgba(0,201,184,0.14); transform: translateY(-1px);')}
-                    activeStyle={css('transform: scale(0.94);')}
+                  />
+                  <Pressable
+                    as="button"
+                    type="submit"
+                    disabled={!vm.chatDraft.trim()}
+                    baseStyle={css(
+                      "flex-shrink: 0; height: 38px; padding: 0 14px; border: 2px solid #22242a; border-radius: 12px; background: #00c9b8; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; color: #22242a; cursor: pointer; box-shadow: 1.5px 2px 0 rgba(34,36,42,0.12); transition: all 0.12s ease;",
+                    )}
+                    hoverStyle={css('transform: translateY(-1px);')}
+                    activeStyle={css('transform: scale(0.96);')}
                   >
-                    <span style={css('font-size: 14px; line-height: 1;')}>{q.emoji}</span>
-                    {q.text}
+                    Send
                   </Pressable>
-                ))}
-              </div>
+                </form>
+              ) : (
+                <div style={css('padding: 9px; border-top: 2px solid #f0e2cd; display: flex; flex-wrap: wrap; gap: 6px; background: #fffdfa; flex-shrink: 0;')}>
+                  {vm.quickChats.map((q, i) => (
+                    <Pressable
+                      key={i}
+                      as="button"
+                      onClick={q.send}
+                      baseStyle={css(
+                        "display: inline-flex; align-items: center; gap: 5px; background: #fbf1e4; border: 2px solid #22242a; border-radius: 999px; padding: 6px 11px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 800; color: #22242a; cursor: pointer; box-shadow: 1.5px 2px 0 rgba(34,36,42,0.12); transition: all 0.12s ease;",
+                      )}
+                      hoverStyle={css('background: rgba(0,201,184,0.14); transform: translateY(-1px);')}
+                      activeStyle={css('transform: scale(0.94);')}
+                    >
+                      <span style={css('font-size: 14px; line-height: 1;')}>{q.emoji}</span>
+                      {q.text}
+                    </Pressable>
+                  ))}
+                </div>
+              )}
             </div>
           )}
           {vm.chatShowToast && !vm.chatOpen && (

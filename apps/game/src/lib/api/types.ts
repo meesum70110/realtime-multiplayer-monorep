@@ -154,3 +154,11 @@ export type RematchDeclinedRaw = {
   match_id: string
   by_user_id: string
 }
+
+export type ChatMessageRaw = {
+  match_id: string
+  from_user_id: string
+  from_display_name: string
+  text: string
+  sent_at: string
+}

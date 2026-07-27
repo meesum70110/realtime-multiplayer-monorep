@@ -159,6 +159,10 @@ export interface State {
   privateInviteCode: string
   privateJoinDraft: string
   privateError: string
+  /** True for Play-with-a-Friend matches (free-form chat); false for public queue. */
+  isPrivateMatch: boolean
+  /** Draft text for private free-form match chat. */
+  chatDraft: string
   nameDraft: string
   clashes: Clash[]
   flashId: number | null
@@ -418,6 +422,13 @@ export interface ViewModel {
   chatToast: string
   chatShowToast: boolean
   chatFabStyle: CSSProperties
+  /** Private friend matches use a text input; public queue keeps quick emotes. */
+  chatIsFreeForm: boolean
+  chatDraft: string
+  chatDraftMaxLength: number
+  onChatDraft: (e: ChangeEvent<HTMLInputElement>) => void
+  onSendChatDraft: () => void
+  chatEmptyHint: string
 
   // profile modal
   showProfile: boolean

@@ -10,6 +10,7 @@ import {
 } from './constants'
 import type {
   BattleResolvedInfo,
+  ChatMessageInfo,
   MatchCompletedInfo,
   MatchForfeitedInfo,
   MatchFoundInfo,
@@ -86,6 +87,8 @@ const INITIAL_STATE: State = {
   privateInviteCode: '',
   privateJoinDraft: '',
   privateError: '',
+  isPrivateMatch: false,
+  chatDraft: '',
   nameDraft: '',
   clashes: [],
   flashId: null,
@@ -165,6 +168,8 @@ export class GameEngine {
   private searchEpoch = 0
   /** Latches so socket + REST instant-match can't double-start the face-off. */
   private matchAccepted = false
+  /** Latches private lobby create/join so match_found can mark isPrivateMatch. */
+  private privateMatchPending = false
   private selfUserId: string | null = null
   private playerSide: PlayerSide | null = null
   private serverRoundLimit: number = DEFAULT_PROPS.timerSeconds
@@ -483,6 +488,9 @@ export class GameEngine {
         this.audio.sfx('error')
         this.t(() => this.toMenu(), 1400)
       }),
+      transport.onChatMessage((info) => {
+        this.handleRemoteChatMessage(info)
+      }),
     )
   }
 
@@ -613,6 +621,8 @@ export class GameEngine {
   }
 
   // ---- match chat ----
+  private static readonly CHAT_TEXT_MAX = 50
+
   private addChat(from: 'you' | 'bot', text: string): void {
     this.setState((s) => ({
       chatMsgs: [...s.chatMsgs, { id: ++this.chatId, from, text }].slice(-40),
@@ -622,10 +632,38 @@ export class GameEngine {
   }
 
   sendChat(text: string): void {
+    const trimmed = text.replace(/\s+/g, ' ').trim().slice(0, GameEngine.CHAT_TEXT_MAX)
+    if (!trimmed) return
+
     this.audio.sfx('click')
-    this.addChat('you', text)
+    this.addChat('you', trimmed)
+
+    // Live match: relay to the opponent via Socket.IO (no local bot reply).
+    if (this.state.matchMode === 'online' && this.transport && this.activeMatchId) {
+      this.transport.sendChatMessage(this.activeMatchId, trimmed)
+      return
+    }
+
+    // Offline / ghost: keep the classic simulated opponent reply.
     if (Math.random() < 0.55)
       this.t(() => this.botChat(rand(this.BOT_REPLIES)), 900 + Math.random() * 1000)
+  }
+
+  setChatDraft(value: string): void {
+    this.setState({ chatDraft: value.slice(0, GameEngine.CHAT_TEXT_MAX) })
+  }
+
+  sendChatDraft(): void {
+    const draft = this.state.chatDraft
+    this.setState({ chatDraft: '' })
+    this.sendChat(draft)
+  }
+
+  private handleRemoteChatMessage(info: ChatMessageInfo): void {
+    if (!this.activeMatchId || info.matchId !== this.activeMatchId) return
+    if (this.selfUserId && info.fromUserId === this.selfUserId) return
+    if (this.state.phase === 'menu' || this.state.phase === 'searching') return
+    this.botChat(info.text)
   }
 
   private botChat(text: string): void {
@@ -1565,7 +1603,11 @@ export class GameEngine {
       rematchNotice: '',
       privateInviteCode: '',
       privateError: '',
+      isPrivateMatch: false,
+      chatDraft: '',
     })
+
+    this.privateMatchPending = false
 
     if (!this.transport) {
       this.beginLocalFoundCountdown()
@@ -1629,6 +1671,13 @@ export class GameEngine {
     this.playerSide = info.playerSide
     this.serverRoundLimit = info.roundTimeLimitSeconds || DEFAULT_PROPS.timerSeconds
 
+    const isPrivateMatch =
+      this.privateMatchPending ||
+      !!this.state.privateInviteCode ||
+      this.state.isPrivateMatch
+
+    this.privateMatchPending = false
+
     const handle =
       '@' +
       info.opponent.displayName
@@ -1644,6 +1693,7 @@ export class GameEngine {
       searchStep: 'searching',
       matchCount: 0,
       matchMode: 'online',
+      isPrivateMatch,
       oppName: info.opponent.displayName,
       oppHandle: handle || '@rival',
       oppCountry: c[1] ?? this.state.oppCountry,
@@ -1665,6 +1715,7 @@ export class GameEngine {
       chatOpen: false,
       chatUnread: 0,
       chatToast: null,
+      chatDraft: '',
       profileView: null,
     })
     this.beginLocalFoundCountdown()
@@ -1698,6 +1749,7 @@ export class GameEngine {
     this.roundEndsAt = null
     this.setState({
       matchMode: 'ghost',
+      isPrivateMatch: false,
       oppName: ghost.name,
       oppHandle: ghost.handle,
     })
@@ -1745,6 +1797,7 @@ export class GameEngine {
     this.queueEntryId = null
     this.clearMatchFoundSub()
     this.clearGhostTimer()
+    this.privateMatchPending = false
     if (queueId && this.transport) {
       void this.transport.cancelQueue(queueId).catch(() => undefined)
     }
@@ -1761,6 +1814,8 @@ export class GameEngine {
       oppHandle: '@doom_bot',
       privateInviteCode: '',
       privateError: '',
+      isPrivateMatch: false,
+      chatDraft: '',
     })
   }
 
@@ -1768,6 +1823,7 @@ export class GameEngine {
     this.searchEpoch += 1
     this.clearMatchFoundSub()
     this.clearGhostTimer()
+    this.privateMatchPending = false
     const endingMatchId = this.activeMatchId
     const wasActiveOnline =
       this.state.matchMode === 'online' &&
@@ -1816,6 +1872,8 @@ export class GameEngine {
       rematchNotice: '',
       privateInviteCode: '',
       privateError: '',
+      isPrivateMatch: false,
+      chatDraft: '',
       overlay: null,
       // Keep last known live presence; only mock when offline.
       playersOnline: this.transport
@@ -2398,13 +2456,16 @@ export class GameEngine {
       .then((info) => {
         this.searchEpoch += 1
         this.matchAccepted = false
+        this.privateMatchPending = true
         this.setState({
           privateInviteCode: info.inviteCode,
           privateError: '',
+          isPrivateMatch: true,
         })
       })
       .catch((err) => {
         console.warn('[private] create failed', err)
+        this.privateMatchPending = false
         this.setState({ privateError: 'Could not create room' })
       })
   }
@@ -2422,14 +2483,16 @@ export class GameEngine {
     this.audio.sfx('click')
     this.searchEpoch += 1
     this.matchAccepted = false
+    this.privateMatchPending = true
     void this.transport
       .joinPrivateLobby(code)
       .then(() => {
-        this.setState({ privateError: '' })
+        this.setState({ privateError: '', isPrivateMatch: true })
       })
       .catch((err) => {
         console.warn('[private] join failed', err)
-        this.setState({ privateError: 'Room not found or unavailable' })
+        this.privateMatchPending = false
+        this.setState({ privateError: 'Room not found or unavailable', isPrivateMatch: false })
       })
   }
 
@@ -2438,9 +2501,11 @@ export class GameEngine {
     if (this.transport && this.state.privateInviteCode) {
       void this.transport.cancelPrivateLobby().catch(() => undefined)
     }
+    this.privateMatchPending = false
     this.setState({
       privateInviteCode: '',
       privateError: '',
+      isPrivateMatch: false,
     })
   }
 

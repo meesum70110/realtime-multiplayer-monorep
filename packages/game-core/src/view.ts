@@ -255,6 +255,14 @@ export function buildView(engine: GameEngine): ViewModel {
     onToggleChat: () => engine.toggleChat(),
     chatToast: s.chatToast || '',
     chatShowToast: arenaMode && !s.tutorMode && !s.chatOpen && !!s.chatToast,
+    chatIsFreeForm: s.isPrivateMatch && s.matchMode === 'online',
+    chatDraft: s.chatDraft,
+    chatDraftMaxLength: 50,
+    onChatDraft: (e) => engine.setChatDraft(e.target.value),
+    onSendChatDraft: () => engine.sendChatDraft(),
+    chatEmptyHint: s.isPrivateMatch
+      ? 'Say anything — keep it under 50 characters.'
+      : 'Tap a quick emote to fire it off.',
     chatFabStyle: {
       position: 'relative',
       width: '56px',
