@@ -3,7 +3,8 @@ import type { CSSProperties, ChangeEvent, KeyboardEvent, MouseEvent } from 'reac
 export type Phase = 'menu' | 'searching' | 'intro' | 'banner' | 'typing' | 'clash' | 'end'
 export type Outcome = '' | 'you' | 'opp' | 'tie' | 'timeout'
 export type RoundOutcome = 'you' | 'opp' | 'tie'
-export type ClashStep = 'break' | 'verdict'
+/** fight/impact = in-clash animation; verdict = result screen. */
+export type ClashStep = 'fight' | 'impact' | 'break' | 'verdict'
 export type SearchStep = 'searching' | 'found'
 export type OverlayKind = null | 'howto' | 'settings' | 'invite' | 'tutorialConfirm' | 'profileSettings'
 export type ProfileView = null | 'you' | 'opp' | 'friend'

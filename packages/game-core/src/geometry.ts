@@ -426,7 +426,7 @@ export function clashWrap(
     zIndex: 2,
   }
   base[mine ? 'left' : 'right'] = '75px'
-  if (step === 'break') {
+  if (step === 'break' || step === 'impact' || step === 'fight') {
     const M: Record<ClashAnim, [string, string]> = {
       rush: [
         mine ? 'arenaLungeL' : 'arenaLungeR',

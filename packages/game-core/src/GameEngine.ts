@@ -35,6 +35,7 @@ import type {
   Friend,
   MorphSym,
   OverlayKind,
+  Phase,
   ProfileView,
   RoundOutcome,
   State,
@@ -2237,9 +2238,15 @@ export class GameEngine {
       return verdict
     }
     if (this.scoresFromServer || this.isOnlineMatch()) {
-      const outcome = (this.state.outcome || 'tie') as RoundOutcome
+      const raw = this.state.outcome
+      const outcome: RoundOutcome =
+        raw === 'you' || raw === 'opp' || raw === 'tie'
+          ? raw
+          : raw === 'timeout'
+            ? 'opp'
+            : 'tie'
       return {
-        outcome: outcome === 'timeout' ? 'opp' : outcome,
+        outcome,
         headline: this.state.headline || 'VERDICT',
         flavor: this.state.flavor,
       }
@@ -2267,8 +2274,14 @@ export class GameEngine {
     this.runClashAnimation()
   }
 
+  /** True when clash should not start/continue (fresh read — avoids post-await phase narrowing). */
+  private shouldAbortClash(): boolean {
+    const phase: Phase = this.state.phase
+    return phase === 'clash' || phase === 'end' || phase === 'menu' || phase === 'searching'
+  }
+
   private async beginBotClashWithAi(): Promise<void> {
-    if (this.aiJudging || this.state.phase === 'clash') return
+    if (this.aiJudging || this.shouldAbortClash()) return
     const transport = this.transport
     if (!transport?.resolveDuel) {
       this.runClashAnimation()
@@ -2280,12 +2293,7 @@ export class GameEngine {
     const opp = this.state.oppThrow
     try {
       const judged = await transport.resolveDuel(you, opp)
-      if (
-        this.state.phase === 'clash' ||
-        this.state.phase === 'end' ||
-        this.state.phase === 'menu' ||
-        this.state.phase === 'searching'
-      ) {
+      if (this.shouldAbortClash()) {
         return
       }
       const outcome: RoundOutcome =
@@ -2311,12 +2319,7 @@ export class GameEngine {
       this.aiJudging = false
     }
 
-    if (
-      this.state.phase === 'clash' ||
-      this.state.phase === 'end' ||
-      this.state.phase === 'menu' ||
-      this.state.phase === 'searching'
-    ) {
+    if (this.shouldAbortClash()) {
       return
     }
     this.runClashAnimation()

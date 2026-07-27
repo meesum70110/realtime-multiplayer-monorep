@@ -685,12 +685,12 @@ export function buildView(engine: GameEngine): ViewModel {
       width: '1000px',
       height: '490px',
       animation:
-        s.clashStep === 'break' ? 'impactShakeZoom 0.6s cubic-bezier(0.2, 0.8, 0.3, 1) 2.85s' : 'none',
+        (s.clashStep === 'break' || s.clashStep === 'impact' || s.clashStep === 'fight') ? 'impactShakeZoom 0.6s cubic-bezier(0.2, 0.8, 0.3, 1) 2.85s' : 'none',
     },
     clashWord: s.clashWord,
     streakLStyle: engine.streakStyle(true, s.clashAnim),
     streakRStyle: engine.streakStyle(false, s.clashAnim),
-    barrierBreaking: s.clashStep === 'break',
+    barrierBreaking: (s.clashStep === 'break' || s.clashStep === 'impact' || s.clashStep === 'fight'),
     paneWrapBreakStyle: paneWrap('break'),
     paneOverlayBreakStyle: {
       position: 'absolute',
@@ -717,14 +717,14 @@ export function buildView(engine: GameEngine): ViewModel {
     yourBraceStyle: {
       perspective: '1200px',
       animation:
-        s.clashStep === 'break'
+        (s.clashStep === 'break' || s.clashStep === 'impact' || s.clashStep === 'fight')
           ? 'cardBraceL 1.1s ease 0.15s both, cardCharge 0.85s ease-in-out 1.5s both'
           : 'none',
     },
     oppBraceStyle: {
       perspective: '1200px',
       animation:
-        s.clashStep === 'break'
+        (s.clashStep === 'break' || s.clashStep === 'impact' || s.clashStep === 'fight')
           ? 'cardBraceR 1.1s ease 0.15s both, cardCharge 0.85s ease-in-out 1.62s both'
           : 'none',
     },
